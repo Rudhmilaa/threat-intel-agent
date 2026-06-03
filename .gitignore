@@ -1,0 +1,4 @@
+.env
+.venv/
+__pycache__/
+threat_report.json
