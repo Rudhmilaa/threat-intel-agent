@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import anthropic
 import os
@@ -82,6 +83,60 @@ tools = [
                 }
             },
             "required": ["query"],
+        },
+    },
+    {
+        "name": "find_related_iocs",
+        "description": "Find indicators related to a given IOC, including connected IPs, domains, file hashes, malware families, and infrastructure relationships. Useful for pivoting from one indicator to broader campaign infrastructure.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ioc": {
+                    "type": "string",
+                    "description": "The indicator to pivot from, such as an IP address, domain, or file hash.",
+                },
+                "ioc_type": {
+                    "type": "string",
+                    "enum": ["ip_address", "domain", "file_hash"],
+                    "description": "The type of IOC being investigated.",
+                },
+            },
+            "required": ["ioc", "ioc_type"],
+        },
+    },
+
+    {
+        "name": "classify_known_scanner",
+        "description": "Determine whether an IP address belongs to a known internet scanner or security research organization such as Censys, Shodan, Palo Alto Cortex Xpanse, or other benign scanning infrastructure.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ip_address": {
+                    "type": "string",
+                    "description": "The IP address to classify.",
+                }
+            },
+            "required": ["ip_address"],
+        },
+    },
+
+    {
+        "name": "lookup_ioc_timeline",
+        "description": "Look up first seen, last seen, activity duration, and trend information for an IOC. Useful for determining whether an indicator is new, old, active, recurring, or increasing in activity.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ioc": {
+                    "type": "string",
+                    "description": "The indicator to look up, such as an IP address, domain, or file hash.",
+                },
+                "ioc_type": {
+                    "type": "string",
+                    "enum": ["ip_address", "domain", "file_hash"],
+                    "description": "The type of IOC being investigated.",
+                },
+            },
+            "required": ["ioc", "ioc_type"],
         },
     },
 ]
@@ -545,6 +600,9 @@ def process_tool_call(tool_name: str, tool_input: dict) -> str:
         "lookup_file_hash": lambda inp: lookup_file_hash(inp["file_hash"], inp["hash_type"]),
         "lookup_domain": lambda inp: lookup_domain(inp["domain"]),
         "get_mitre_techniques": lambda inp: get_mitre_techniques(inp["query"]),
+        "find_related_iocs": lambda inp: find_related_iocs(inp["ioc"], inp["ioc_type"]),
+        "classify_known_scanner": lambda inp: classify_known_scanner(inp["ip_address"]),
+        "classify_known_scanner": lambda inp: classify_known_scanner(inp["ip_address"]),
     }
     handler = handlers.get(tool_name)
     if handler is None:
@@ -748,6 +806,201 @@ def run_mock_agent(ioc: str, ioc_type: str):
     else:
         print("Unknown IOC type.")
 
+# ── STAGE 6: Related IOC Tool ──────────────────────────────────
+
+def find_related_iocs(ioc: str, ioc_type: str) -> dict:
+    related_database = {
+        "203.0.113.42": {
+            "ioc": "203.0.113.42",
+            "ioc_type": "ip_address",
+            "related_domains": ["update-service-cdn.ru"],
+            "related_hashes": ["d131dd02c5e6eec4693d9a0698aff95c"],
+            "related_ips": ["203.0.113.88"],
+            "malware_families": ["Emotet", "Trickbot"],
+            "relationship_summary": "IP is associated with Emotet/Trickbot C2 infrastructure and overlaps with malware delivery domains.",
+        },
+        "d131dd02c5e6eec4693d9a0698aff95c": {
+            "ioc": "d131dd02c5e6eec4693d9a0698aff95c",
+            "ioc_type": "file_hash",
+            "related_domains": ["update-service-cdn.ru", "cdn-api-gateway.cc"],
+            "related_ips": ["203.0.113.42", "203.0.113.88", "192.0.2.101"],
+            "related_hashes": [],
+            "malware_families": ["Emotet"],
+            "relationship_summary": "File hash contacts multiple C2 infrastructure nodes and malware delivery domains.",
+        },
+        "update-service-cdn.ru": {
+            "ioc": "update-service-cdn.ru",
+            "ioc_type": "domain",
+            "related_ips": ["203.0.113.42", "203.0.113.88"],
+            "related_hashes": ["d131dd02c5e6eec4693d9a0698aff95c"],
+            "related_domains": ["cdn-api-gateway.cc"],
+            "malware_families": ["Emotet", "Trickbot"],
+            "relationship_summary": "Domain resolves to known malicious C2 infrastructure and is linked to Emotet activity.",
+        },
+    }
+
+    if ioc not in related_database:
+        return {
+            "ioc": ioc,
+            "ioc_type": ioc_type,
+            "related_ips": [],
+            "related_domains": [],
+            "related_hashes": [],
+            "malware_families": [],
+            "relationship_summary": "No related indicators found.",
+        }
+
+    return related_database[ioc]
+
+# ── STAGE 7: Known Scanner Classification Tool ──────────────────────────────────
+def classify_known_scanner(ip_address: str) -> dict:
+    """
+    Classifies whether an IP belongs to known internet scanning infrastructure.
+    This helps avoid over-labeling benign scanner traffic as malicious.
+    """
+
+    known_scanner_ranges = [
+        {
+            "company": "Palo Alto Networks Cortex Xpanse",
+            "category": "attack_surface_scanner",
+            "ranges": [
+                "35.203.210.0/23",
+                "144.86.173.0/24",
+                "147.185.132.0/23",
+                "162.216.149.0/24",
+                "162.216.150.0/24",
+                "172.105.147.0/24",
+                "198.235.24.0/24",
+                "205.210.31.0/24",
+                "216.25.88.0/21",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Published Cortex Xpanse scanner range. Usually benign scanning, but still monitor if behavior is excessive.",
+        },
+        {
+            "company": "Censys",
+            "category": "internet_research_scanner",
+            "ranges": [
+                "162.142.125.0/24",
+                "167.94.138.0/24",
+                "167.94.145.0/24",
+                "167.94.146.0/24",
+                "167.248.133.0/24",
+                "199.45.154.0/24",
+                "199.45.155.0/24",
+                "206.168.34.0/24",
+                "206.168.35.0/24",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Censys scans public internet infrastructure for internet-wide measurement and attack surface visibility.",
+        },
+        {
+            "company": "Shodan",
+            "category": "internet_search_scanner",
+            "ranges": [
+                "207.90.244.0/24",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Shodan crawls internet-connected services. Treat as scanner traffic unless paired with exploit attempts or authentication failures.",
+        },
+    ]
+
+    ip_obj = ipaddress.ip_address(ip_address)
+
+    for scanner in known_scanner_ranges:
+        for network in scanner["ranges"]:
+            if ip_obj in ipaddress.ip_network(network):
+                return {
+                    "ip": ip_address,
+                    "is_known_scanner": True,
+                    "company": scanner["company"],
+                    "category": scanner["category"],
+                    "classification": scanner["classification"],
+                    "default_severity": scanner["default_severity"],
+                    "matched_range": network,
+                    "notes": scanner["notes"],
+                }
+
+    return {
+        "ip": ip_address,
+        "is_known_scanner": False,
+        "classification": "not_known_scanner",
+        "default_severity": "UNKNOWN",
+        "notes": "IP did not match known scanner ranges in the local scanner database.",
+    }
+
+# ── STAGE 8: IOC Timeline Tool ────────────────────────────────────────────────
+def classify_known_scanner(ip_address: str) -> dict:
+    known_scanner_ranges = [
+        {
+            "company": "Palo Alto Networks Cortex Xpanse",
+            "category": "attack_surface_scanner",
+            "ranges": [
+                "198.235.24.0/24",
+                "205.210.31.0/24",
+                "162.216.149.0/24",
+                "162.216.150.0/24",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Known internet-wide scanner. Usually not malicious by itself.",
+        },
+        {
+            "company": "Censys",
+            "category": "internet_research_scanner",
+            "ranges": [
+                "162.142.125.0/24",
+                "167.94.138.0/24",
+                "167.94.145.0/24",
+                "167.94.146.0/24",
+                "167.248.133.0/24",
+                "199.45.154.0/24",
+                "199.45.155.0/24",
+                "206.168.34.0/24",
+                "206.168.35.0/24",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Censys scanner traffic. Usually benign internet measurement.",
+        },
+        {
+            "company": "Shodan",
+            "category": "internet_search_scanner",
+            "ranges": [
+                "207.90.244.0/24",
+            ],
+            "classification": "known_scanner",
+            "default_severity": "LOW",
+            "notes": "Shodan scanner traffic. Usually benign unless paired with exploit attempts.",
+        },
+    ]
+
+    ip_obj = ipaddress.ip_address(ip_address)
+
+    for scanner in known_scanner_ranges:
+        for network in scanner["ranges"]:
+            if ip_obj in ipaddress.ip_network(network):
+                return {
+                    "ip": ip_address,
+                    "is_known_scanner": True,
+                    "company": scanner["company"],
+                    "category": scanner["category"],
+                    "classification": scanner["classification"],
+                    "default_severity": scanner["default_severity"],
+                    "matched_range": network,
+                    "notes": scanner["notes"],
+                }
+
+    return {
+        "ip": ip_address,
+        "is_known_scanner": False,
+        "classification": "not_known_scanner",
+        "default_severity": "UNKNOWN",
+        "notes": "IP did not match known scanner ranges.",
+    }
 
 # Try all 3 sample cases without using the API
 # run_mock_agent("203.0.113.42", "ip_address")
@@ -757,19 +1010,19 @@ def run_mock_agent(ioc: str, ioc_type: str):
 #testing block
 if __name__ == "__main__":
 
-    print("\nREAL CLAUDE AGENT TEST")
+    # print("\nREAL CLAUDE AGENT TEST")
 
-    analysis, tool_calls = run_threat_intel_agent(
-        "203.0.113.42",
-        "ip_address"
-    )
+    # analysis, tool_calls = run_threat_intel_agent(
+    #     "203.0.113.42",
+    #     "ip_address"
+    # )
 
-    print(f"\nClaude used {len(tool_calls)} tool(s):")
-    for call in tool_calls:
-        print(f"- {call['tool']} {call['input']}")
+    # print(f"\nClaude used {len(tool_calls)} tool(s):")
+    # for call in tool_calls:
+    #     print(f"- {call['tool']} {call['input']}")
 
-    print("\nClaude Analysis:")
-    print(analysis)
+    # print("\nClaude Analysis:")
+    # print(analysis)
 
     hash_data = lookup_file_hash(
         "d131dd02c5e6eec4693d9a0698aff95c",
@@ -799,3 +1052,32 @@ if __name__ == "__main__":
     #     json.dump(json_report, file, indent=2)
 
     print("\nSaved JSON report to threat_report.json")
+
+    print("\nRELATED IOC TEST")
+    print(json.dumps(
+        find_related_iocs("203.0.113.42", "ip_address"),
+        indent=2
+    ))
+
+    print("\nKNOWN SCANNER TEST")
+    print(json.dumps(
+        classify_known_scanner("198.235.24.10"),
+        indent=2
+    )   )
+
+    print(json.dumps(
+        classify_known_scanner("203.0.113.42"),
+        indent=2
+    )) 
+
+    print("\nKNOWN SCANNER TEST")
+
+    print(json.dumps(
+        classify_known_scanner("198.235.24.10"),
+        indent=2
+    ))
+
+    print(json.dumps(
+        classify_known_scanner("203.0.113.42"),
+        indent=2
+    ))
