@@ -7,6 +7,25 @@ import os
 from dotenv import load_dotenv
 import os
 
+STANDARD_IOC_TYPES = {
+    "ip": "ip_address",
+    "ipv4": "ip_address",
+    "ipv6": "ip_address",
+    "ip_address": "ip_address",
+    "domain": "domain",
+    "url": "url",
+    "hash": "file_hash",
+    "md5": "file_hash",
+    "sha1": "file_hash",
+    "sha256": "file_hash",
+    "file_hash": "file_hash",
+}
+
+
+def standardize_ioc_type(ioc_type: str) -> str:
+    normalized = ioc_type.lower().strip()
+    return STANDARD_IOC_TYPES.get(normalized, "unknown")
+
 load_dotenv()
 
 client = anthropic.Anthropic(
@@ -137,6 +156,66 @@ tools = [
                 },
             },
             "required": ["ioc", "ioc_type"],
+        },
+    },
+
+    {
+        "name": "classify_greynoise",
+        "description": "Classify internet background noise versus malicious infrastructure using a GreyNoise-style classification.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ip_address": {
+                    "type": "string",
+                    "description": "The IP address to classify.",
+                }
+            },
+            "required": ["ip_address"],
+        },
+    },
+
+    {
+        "name": "classify_anonymizer_network",
+        "description": "Detect Tor, VPN, proxy, and suspicious hosting providers.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ip_address": {
+                    "type": "string",
+                    "description": "The IP address to classify.",
+                }
+            },
+            "required": ["ip_address"],
+        },
+    },
+
+    {
+        "name": "analyze_ip_version",
+        "description": "Analyze whether an IP address is IPv4 or IPv6 and return basic IP properties.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ip_address": {
+                    "type": "string",
+                    "description": "The IP address to analyze.",
+                }
+            },
+            "required": ["ip_address"],
+        },
+    },
+
+    {
+        "name": "calculate_enriched_severity_tool",
+        "description": "Calculate enriched severity, confidence, threat score, and risk factors for an IP address by combining reputation, scanner classification, anonymizer detection, GreyNoise-style classification, and timeline counts.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ip_address": {
+                    "type": "string",
+                    "description": "The IP address to calculate enriched severity for.",
+                }
+            },
+            "required": ["ip_address"],
         },
     },
 ]
@@ -392,6 +471,175 @@ def calculate_risk_score(data: dict) -> dict:
         "severity": severity
     }
 
+# ── Final Scoring ────────────────────────────────────────────────
+
+def calculate_enriched_severity(
+    reputation_data: dict,
+    scanner_data: dict = None,
+    anonymizer_data: dict = None,
+    greynoise_data: dict = None,
+    timeline_data: dict = None,
+) -> dict:
+    """
+    Calculates a richer threat score using multiple enrichment sources.
+
+    This combines:
+    - reputation data
+    - known scanner classification
+    - Tor/VPN/proxy classification
+    - GreyNoise-style classification
+    - IOC timeline counts
+    """
+
+    scanner_data = scanner_data or {}
+    anonymizer_data = anonymizer_data or {}
+    greynoise_data = greynoise_data or {}
+    timeline_data = timeline_data or {}
+
+    threat_score = 0
+    confidence_score = 0
+    risk_factors = []
+
+    # 1. Reputation score
+    abuse_score = reputation_data.get("abuse_confidence_score", 0)
+
+    if abuse_score >= 90:
+        threat_score += 35
+        confidence_score += 25
+        risk_factors.append("Very high abuse confidence score")
+    elif abuse_score >= 70:
+        threat_score += 25
+        confidence_score += 20
+        risk_factors.append("High abuse confidence score")
+    elif abuse_score >= 40:
+        threat_score += 15
+        confidence_score += 10
+        risk_factors.append("Moderate abuse confidence score")
+
+    # 2. Threat types
+    threat_types = reputation_data.get("threat_types", [])
+
+    if threat_types:
+        points = min(len(threat_types) * 8, 25)
+        threat_score += points
+        confidence_score += 15
+        risk_factors.append(
+            f"Observed threat types: {', '.join(threat_types)}"
+        )
+
+    # 3. Malware associations
+    malware = reputation_data.get("known_malware_associations", [])
+
+    if malware:
+        threat_score += 25
+        confidence_score += 20
+        risk_factors.append(
+            f"Associated malware families: {', '.join(malware)}"
+        )
+
+    # 4. Known scanner adjustment
+    if scanner_data.get("is_known_scanner") is True:
+        threat_score -= 30
+        confidence_score += 20
+        risk_factors.append(
+            f"Known scanner infrastructure: {scanner_data.get('company')}"
+        )
+
+    # 5. Tor / VPN / proxy / bulletproof hosting
+    network_type = anonymizer_data.get("network_type")
+
+    if network_type == "tor_exit_node":
+        threat_score += 20
+        confidence_score += 10
+        risk_factors.append("Traffic originated from Tor exit node")
+
+    elif network_type == "commercial_vpn":
+        threat_score += 10
+        confidence_score += 8
+        risk_factors.append("Traffic originated from commercial VPN infrastructure")
+
+    elif network_type == "bulletproof_hosting":
+        threat_score += 25
+        confidence_score += 15
+        risk_factors.append("Infrastructure associated with bulletproof hosting")
+
+    # 6. GreyNoise-style classification
+    gn_classification = greynoise_data.get("classification")
+
+    if gn_classification == "malicious":
+        threat_score += 30
+        confidence_score += 25
+        risk_factors.append("GreyNoise-style classification is malicious")
+
+    elif gn_classification == "benign_scanner":
+        threat_score -= 25
+        confidence_score += 20
+        risk_factors.append("GreyNoise-style classification indicates benign scanner")
+
+    elif gn_classification == "suspicious":
+        threat_score += 15
+        confidence_score += 10
+        risk_factors.append("GreyNoise-style classification is suspicious")
+
+    # 7. Timeline counts
+    observation_count = timeline_data.get("observation_count", 0)
+
+    if observation_count >= 1000:
+        threat_score += 15
+        confidence_score += 15
+        risk_factors.append("High historical observation count")
+    elif observation_count >= 100:
+        threat_score += 10
+        confidence_score += 10
+        risk_factors.append("Moderate historical observation count")
+    elif observation_count > 0:
+        threat_score += 5
+        confidence_score += 5
+        risk_factors.append("Limited historical observation count")
+
+    trend = timeline_data.get("trend")
+
+    if trend == "increasing":
+        threat_score += 10
+        risk_factors.append("Activity trend is increasing")
+
+    # Normalize scores
+    threat_score = max(0, min(threat_score, 100))
+    confidence_score = max(0, min(confidence_score, 100))
+
+    if threat_score >= 85:
+        severity = "CRITICAL"
+    elif threat_score >= 65:
+        severity = "HIGH"
+    elif threat_score >= 40:
+        severity = "MEDIUM"
+    elif threat_score >= 15:
+        severity = "LOW"
+    else:
+        severity = "INFORMATIONAL"
+
+    return {
+        "threat_score": threat_score,
+        "confidence_score": confidence_score,
+        "severity": severity,
+        "risk_factors": risk_factors,
+    }
+
+def calculate_enriched_severity_tool(ip_address: str) -> dict:
+    reputation_data = lookup_ip_reputation(ip_address)
+    scanner_data = classify_known_scanner(ip_address)
+    anonymizer_data = classify_anonymizer_network(ip_address)
+    greynoise_data = classify_greynoise(ip_address)
+    timeline_data = lookup_ioc_timeline(ip_address, "ip_address")
+
+    return calculate_enriched_severity(
+        reputation_data=reputation_data,
+        scanner_data=scanner_data,
+        anonymizer_data=anonymizer_data,
+        greynoise_data=greynoise_data,
+        timeline_data=timeline_data,
+    )
+
 # ── Actual Threat Report ────────────────────────────────────────────────
 
 def generate_threat_report(ioc: str, data: dict) -> str:
@@ -581,16 +829,47 @@ def display_relationship_graph(graph):
 SYSTEM_PROMPT = """
 You are a senior cyber threat intelligence analyst.
 
-Rules:
-- Investigate efficiently.
-- Do not call the same tool repeatedly for similar information.
-- Maximum 5 tool calls.
+When investigating an IOC, use the available tools to enrich it efficiently.
+
+Tool budget:
+- For IP investigations, use at most 8 total tool calls.
+- After calculate_enriched_severity_tool is called, do not call any more tools.
+- If enriched severity, reputation, scanner classification, GreyNoise classification, timeline, and related IOCs are available, stop and write the final report.
+- Do not call get_mitre_techniques more than once per investigation.
+
+For IP addresses:
+- First analyze whether the IP is IPv4 or IPv6.
+- Check whether the IP is a known scanner.
+- Check whether the IP belongs to Tor, VPN, proxy, or suspicious hosting infrastructure.
+- Check GreyNoise-style classification to distinguish benign internet noise from malicious activity.
+- Check reputation and related IOCs.
+- Check timeline data to understand first seen, last seen, observation count, and trend.
+- Use calculate_enriched_severity_tool to produce the final threat score, confidence score, severity, and risk factors.
+
+For domains:
+- Check domain reputation.
+- Check related IOCs.
+- Check timeline data.
+- Map relevant behaviors to MITRE ATT&CK.
+
+For file hashes:
+- Check file hash reputation.
+- Investigate only related IPs or domains returned by tools.
+- Map malware behaviors to MITRE ATT&CK.
 - Do not invent hashes, domains, or IPs.
-- Only investigate indicators explicitly returned by tools.
-- Produce concise analyst reports.
+
+Rules:
+- Do not call the same tool repeatedly for similar information.
+- Do not invent indicators.
+- Only investigate indicators explicitly provided by the user or returned by tools.
+- Distinguish malicious infrastructure from known benign scanner traffic.
+- Treat Tor/VPN/proxy traffic as context, not automatic proof of maliciousness.
+- Produce concise analyst-ready reports with severity, confidence, evidence, and recommended actions.
+- Keep the final report under 600 words.
+- Use concise bullet points instead of long narrative explanations.
 """
 
-MAX_TURNS = 10  # prevents runaway loops and runaway costs
+MAX_TURNS = 4 # prevents runaway loops and runaway costs
 
 
 def process_tool_call(tool_name: str, tool_input: dict) -> str:
@@ -602,7 +881,11 @@ def process_tool_call(tool_name: str, tool_input: dict) -> str:
         "get_mitre_techniques": lambda inp: get_mitre_techniques(inp["query"]),
         "find_related_iocs": lambda inp: find_related_iocs(inp["ioc"], inp["ioc_type"]),
         "classify_known_scanner": lambda inp: classify_known_scanner(inp["ip_address"]),
-        "classify_known_scanner": lambda inp: classify_known_scanner(inp["ip_address"]),
+        "lookup_ioc_timeline": lambda inp: lookup_ioc_timeline(inp["ioc"], inp["ioc_type"]),
+        "analyze_ip_version": lambda inp: analyze_ip_version(inp["ip_address"]),
+        "classify_greynoise": lambda inp: classify_greynoise(inp["ip_address"]),
+        "classify_anonymizer_network": lambda inp: classify_anonymizer_network(inp["ip_address"]),
+        "calculate_enriched_severity_tool": lambda inp: calculate_enriched_severity_tool(inp["ip_address"]),
     }
     handler = handlers.get(tool_name)
     if handler is None:
@@ -620,9 +903,9 @@ def run_threat_intel_agent(ioc: str, ioc_type: str) -> tuple: #fix api key to ru
         f"Investigate this indicator of compromise and provide a threat assessment:\n"
         f"  IOC: {ioc}\n"
         f"  Type: {ioc_type}\n\n"
-        f"Query all relevant intelligence sources, cross-reference findings, "
-        f"map to MITRE ATT&CK where applicable, and provide your assessment with "
-        f"severity rating, confidence score, and recommended response actions."
+        f"Use the fewest relevant tools. For IP addresses, call calculate_enriched_severity_tool once enough context is available, then stop tool use and write the final report. "
+        f"Provide severity, confidence score, evidence, and recommended response actions. "
+        f"Keep the report under 500 words."
     )
 
     messages = [{"role": "user", "content": user_message}]
@@ -633,7 +916,7 @@ def run_threat_intel_agent(ioc: str, ioc_type: str) -> tuple: #fix api key to ru
 
         response = client.messages.create( #fix api key to run this 
             model=MODEL_NAME,
-            max_tokens=4096,
+            max_tokens=3000,
             system=SYSTEM_PROMPT,
             tools=tools,
             messages=messages,
@@ -659,6 +942,9 @@ def run_threat_intel_agent(ioc: str, ioc_type: str) -> tuple: #fix api key to ru
                 if block.type == "tool_use":
                     print(f"    -> Tool: {block.name}({json.dumps(block.input)})")
                     tool_calls_made.append({"tool": block.name, "input": block.input})
+
+                    if block.name == "calculate_enriched_severity_tool":
+                        print("    -> Enriched severity calculated. Agent should stop after this turn.")
 
                     result = process_tool_call(block.name, block.input)
 
@@ -933,50 +1219,7 @@ def classify_known_scanner(ip_address: str) -> dict:
     }
 
 # ── STAGE 8: IOC Timeline Tool ────────────────────────────────────────────────
-def classify_known_scanner(ip_address: str) -> dict:
-    known_scanner_ranges = [
-        {
-            "company": "Palo Alto Networks Cortex Xpanse",
-            "category": "attack_surface_scanner",
-            "ranges": [
-                "198.235.24.0/24",
-                "205.210.31.0/24",
-                "162.216.149.0/24",
-                "162.216.150.0/24",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Known internet-wide scanner. Usually not malicious by itself.",
-        },
-        {
-            "company": "Censys",
-            "category": "internet_research_scanner",
-            "ranges": [
-                "162.142.125.0/24",
-                "167.94.138.0/24",
-                "167.94.145.0/24",
-                "167.94.146.0/24",
-                "167.248.133.0/24",
-                "199.45.154.0/24",
-                "199.45.155.0/24",
-                "206.168.34.0/24",
-                "206.168.35.0/24",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Censys scanner traffic. Usually benign internet measurement.",
-        },
-        {
-            "company": "Shodan",
-            "category": "internet_search_scanner",
-            "ranges": [
-                "207.90.244.0/24",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Shodan scanner traffic. Usually benign unless paired with exploit attempts.",
-        },
-    ]
+
 
     ip_obj = ipaddress.ip_address(ip_address)
 
@@ -1002,10 +1245,150 @@ def classify_known_scanner(ip_address: str) -> dict:
         "notes": "IP did not match known scanner ranges.",
     }
 
+
 # Try all 3 sample cases without using the API
 # run_mock_agent("203.0.113.42", "ip_address")
 # run_mock_agent("d131dd02c5e6eec4693d9a0698aff95c", "file_hash")
 # run_mock_agent("secure-bankofamerica-login.com", "domain")
+
+
+# ── IPv4/IPv6 Analyzer ────────────────────────────────────────────────
+
+def analyze_ip_version(ip_address: str) -> dict:
+    try:
+        ip_obj = ipaddress.ip_address(ip_address)
+
+        return {
+            "ip": ip_address,
+            "valid_ip": True,
+            "ip_version": f"IPv{ip_obj.version}",
+            "is_private": ip_obj.is_private,
+            "is_global": ip_obj.is_global,
+            "is_loopback": ip_obj.is_loopback,
+            "is_multicast": ip_obj.is_multicast,
+        }
+
+    except ValueError:
+        return {
+            "ip": ip_address,
+            "valid_ip": False,
+            "ip_version": "unknown",
+            "error": "Invalid IP address format",
+        }
+
+# ── Tor/VPN/proxy/hosting classifier ────────────────────────────────────────────────
+
+def classify_anonymizer_network(ip_address: str) -> dict:
+    anonymizer_database = {
+        "185.220.101.1": {
+            "ip": "185.220.101.1",
+            "network_type": "tor_exit_node",
+            "provider": "Tor Network",
+            "risk_modifier": "high",
+            "is_anonymizer": True,
+            "notes": "Known Tor exit node. Not automatically malicious, but high risk for login attempts or abuse events.",
+        },
+        "45.134.26.12": {
+            "ip": "45.134.26.12",
+            "network_type": "commercial_vpn",
+            "provider": "Common VPN Provider",
+            "risk_modifier": "medium",
+            "is_anonymizer": True,
+            "notes": "Commercial VPN infrastructure often used for privacy but also abused by attackers.",
+        },
+        "185.234.216.55": {
+            "ip": "185.234.216.55",
+            "network_type": "bulletproof_hosting",
+            "provider": "Suspicious Hosting Provider",
+            "risk_modifier": "high",
+            "is_anonymizer": False,
+            "notes": "Hosting provider commonly associated with abuse-resistant infrastructure.",
+        },
+    }
+
+    return anonymizer_database.get(
+        ip_address,
+        {
+            "ip": ip_address,
+            "network_type": "unknown",
+            "provider": "unknown",
+            "risk_modifier": "none",
+            "is_anonymizer": False,
+            "notes": "No anonymizer, VPN, Tor, or suspicious hosting match found.",
+        },
+    )
+
+# ── GreyNoise ────────────────────────────────────────────────
+
+def classify_greynoise(ip_address: str) -> dict:
+
+    greynoise_database = {
+
+        "198.235.24.10": {
+            "classification": "benign_scanner",
+            "noise_level": "high",
+            "actor": "Palo Alto Cortex Xpanse",
+            "recommendation": "Ignore unless exploit activity observed"
+        },
+
+        "203.0.113.42": {
+            "classification": "malicious",
+            "noise_level": "high",
+            "actor": "Emotet Infrastructure",
+            "recommendation": "Investigate immediately"
+        },
+
+        "45.134.26.12": {
+            "classification": "suspicious",
+            "noise_level": "medium",
+            "actor": "VPN Infrastructure",
+            "recommendation": "Monitor activity"
+        }
+    }
+
+    return greynoise_database.get(
+        ip_address,
+        {
+            "classification": "unknown",
+            "noise_level": "unknown",
+            "actor": "unknown",
+            "recommendation": "No GreyNoise context available"
+        }
+    )
+
+# ── Timeline Counts ────────────────────────────────────────────────
+
+def lookup_ioc_timeline(ioc: str, ioc_type: str) -> dict:
+
+    timeline_database = {
+
+        "203.0.113.42": {
+            "first_seen": "2025-12-01",
+            "last_seen": "2026-03-10",
+            "observation_count": 1243,
+            "days_active": 99,
+            "trend": "increasing"
+        },
+
+        "update-service-cdn.ru": {
+            "first_seen": "2026-01-14",
+            "last_seen": "2026-03-10",
+            "observation_count": 488,
+            "days_active": 55,
+            "trend": "stable"
+        }
+    }
+
+    return timeline_database.get(
+        ioc,
+        {
+            "first_seen": "unknown",
+            "last_seen": "unknown",
+            "observation_count": 0,
+            "days_active": 0,
+            "trend": "unknown"
+        }
+    )
 
 #testing block
 if __name__ == "__main__":
@@ -1051,7 +1434,7 @@ if __name__ == "__main__":
     # with open("threat_report.json", "w") as file:
     #     json.dump(json_report, file, indent=2)
 
-    print("\nSaved JSON report to threat_report.json")
+    print("\nJSON report generated successfully.")
 
     print("\nRELATED IOC TEST")
     print(json.dumps(
@@ -1070,14 +1453,110 @@ if __name__ == "__main__":
         indent=2
     )) 
 
-    print("\nKNOWN SCANNER TEST")
+    print("\nGREYNOISE TEST")
+    print(
+        json.dumps(
+            classify_greynoise(
+                "203.0.113.42"
+            ),
+            indent=2
+        )
+    )
 
+    print("\nTIMELINE TEST")
+    print(
+        json.dumps(
+            lookup_ioc_timeline(
+                "203.0.113.42",
+                "ip_address"
+            ),
+            indent=2
+        )
+    )
+
+    print("\nANONYMIZER TEST")
+    print(
+        json.dumps(
+            classify_anonymizer_network(
+                "185.220.101.1"
+            ),
+            indent=2
+        )
+    )
+
+    print("\nIP VERSION TEST")
     print(json.dumps(
-        classify_known_scanner("198.235.24.10"),
+        analyze_ip_version("203.0.113.42"),
         indent=2
     ))
 
     print(json.dumps(
-        classify_known_scanner("203.0.113.42"),
+        analyze_ip_version("2606:4700:4700::1111"),
         indent=2
     ))
+
+    print("\nENRICHED SEVERITY TEST")
+
+    ip = "203.0.113.42"
+
+    reputation_data = lookup_ip_reputation(ip)
+    scanner_data = classify_known_scanner(ip)
+    anonymizer_data = classify_anonymizer_network(ip)
+    greynoise_data = classify_greynoise(ip)
+    timeline_data = lookup_ioc_timeline(ip, "ip_address")
+
+    enriched_severity = calculate_enriched_severity(
+        reputation_data=reputation_data,
+        scanner_data=scanner_data,
+        anonymizer_data=anonymizer_data,
+        greynoise_data=greynoise_data,
+        timeline_data=timeline_data,
+    )
+
+    print(json.dumps(enriched_severity, indent=2))
+
+    print("\nKNOWN SCANNER SEVERITY TEST")
+
+    scanner_ip = "198.235.24.10"
+
+    scanner_reputation_data = lookup_ip_reputation(scanner_ip)
+    scanner_scanner_data = classify_known_scanner(scanner_ip)
+    scanner_anonymizer_data = classify_anonymizer_network(scanner_ip)
+    scanner_greynoise_data = classify_greynoise(scanner_ip)
+    scanner_timeline_data = lookup_ioc_timeline(scanner_ip, "ip_address")
+
+    scanner_severity = calculate_enriched_severity(
+        reputation_data=scanner_reputation_data,
+        scanner_data=scanner_scanner_data,
+        anonymizer_data=scanner_anonymizer_data,
+        greynoise_data=scanner_greynoise_data,
+        timeline_data=scanner_timeline_data,
+    )
+
+    print(json.dumps(scanner_severity, indent=2))
+
+    print("\nENRICHED SEVERITY TOOL TEST")
+    print(json.dumps(
+        calculate_enriched_severity_tool("203.0.113.42"),
+        indent=2
+    ))
+
+    print(json.dumps(
+        calculate_enriched_severity_tool("198.235.24.10"),
+        indent=2
+    ))  
+
+    #temp testing block 
+    print("\nREAL CLAUDE MALICIOUS IP TEST")
+
+    analysis, tool_calls = run_threat_intel_agent(
+        "203.0.113.42",
+        "ip_address"
+    )
+
+    print(f"\nClaude used {len(tool_calls)} tool(s):")
+    for call in tool_calls:
+        print(f"- {call['tool']} {call['input']}")
+
+    print("\nClaude Analysis:")
+    print(analysis)
