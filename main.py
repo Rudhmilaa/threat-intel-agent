@@ -1985,6 +1985,8 @@ def build_incident_clusters(enriched_documents: list) -> list:
 
         if cluster_key not in clusters:
 
+            recurrence = detect_recurring_attacker(source_ip)
+
             clusters[cluster_key] = {
                 "incident_id": f"incident-{abs(hash(cluster_key)) % 100000}",
                 "source_ip": source_ip,
@@ -1994,6 +1996,7 @@ def build_incident_clusters(enriched_documents: list) -> list:
                 "recommended_action": get_cluster_recommended_action(
                     doc["threat"]["severity"]
                 ),
+                "recurrence": recurrence,
                 "event_count": 0,
                 "attack_types": set(),
                 "destination_ports": set(),
@@ -2027,6 +2030,124 @@ def build_incident_clusters(enriched_documents: list) -> list:
 
     return results
 
+# ── Priority Queue ────────────────────────────────────────────────
+
+def prioritize_incidents(incident_clusters: list) -> list:
+    """
+    Sort incidents by importance.
+    """
+
+    severity_weights = {
+        "CRITICAL": 100,
+        "HIGH": 75,
+        "MEDIUM": 50,
+        "LOW": 25,
+        "INFORMATIONAL": 0,
+    }
+
+    for incident in incident_clusters:
+
+        severity = incident.get(
+            "severity",
+            "INFORMATIONAL"
+        )
+
+        event_count = incident.get(
+            "event_count",
+            1
+        )
+
+        recurrence = incident.get("recurrence") or {}
+
+        historical_incidents = recurrence.get(
+            "historical_incidents",
+            0
+        )
+
+        trend = recurrence.get(
+            "trend",
+            "unknown"
+        )
+
+        recurrence_bonus = min(
+            historical_incidents * 2,
+            30
+        )
+
+        trend_bonus = 15 if trend == "increasing" else 0
+
+        score = (
+            severity_weights.get(severity, 0)
+            + (event_count * 5)
+            + recurrence_bonus
+            + trend_bonus
+        )
+
+        incident["priority_score"] = score
+
+    return sorted(
+        incident_clusters,
+        key=lambda x: x["priority_score"],
+        reverse=True
+    )
+
+ #── Labels Recurring Attacker ────────────────────────────────────────────────
+def detect_recurring_attacker(ip_address: str) -> dict:
+
+    attacker_history_db = {
+
+        "203.0.113.42": {
+            "first_seen": "2025-11-15",
+            "last_seen": "2026-06-10",
+            "historical_events": 347,
+            "historical_incidents": 28,
+            "trend": "increasing",
+        },
+
+        "198.235.24.10": {
+            "first_seen": "2026-01-01",
+            "last_seen": "2026-06-10",
+            "historical_events": 5200,
+            "historical_incidents": 0,
+            "trend": "stable",
+        }
+    }
+
+    history = attacker_history_db.get(ip_address)
+
+    if not history:
+        return {
+            "recurring_attacker": False,
+            "historical_events": 0,
+            "historical_incidents": 0,
+            "trend": "unknown",
+            "recommendation": "Monitor for future activity."
+        }
+
+    recurring = history["historical_events"] >= 10
+
+    has_prior_incidents = history["historical_incidents"] > 0
+
+    if has_prior_incidents and history["trend"] == "increasing":
+        recommendation = "Escalate recurring attacker activity."
+
+    elif has_prior_incidents:
+        recommendation = "Review recurring incident history."
+
+    elif recurring:
+        recommendation = "Recurring source activity observed; monitor for suspicious behavior."
+
+    else:
+        recommendation = "Monitor."
+
+    return {
+        "recurring_source": recurring,
+        "has_prior_incidents": has_prior_incidents,
+        "historical_events": history["historical_events"],
+        "historical_incidents": history["historical_incidents"],
+        "trend": history["trend"],
+        "recommendation": recommendation,
+    }
 
 #testing block
 if __name__ == "__main__":
@@ -2369,5 +2490,16 @@ clusters = build_incident_clusters(
 
 print(json.dumps(
     clusters,
+    indent=2
+))
+
+print("\nPRIORITY QUEUE TEST")
+
+prioritized = prioritize_incidents(
+    clusters
+)
+
+print(json.dumps(
+    prioritized,
     indent=2
 ))
