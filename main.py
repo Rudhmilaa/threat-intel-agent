@@ -1853,6 +1853,90 @@ def enrich_honeypot_events(events: list) -> list:
 
     return enriched_documents
 
+# ── Deduplication + caching ────────────────────────────────────────────────
+def enrich_honeypot_events_with_cache(events: list) -> list:
+    """
+    Enriches multiple STINGAR honeypot events while caching
+    intelligence summaries per source IP.
+
+    This prevents repeated API calls for the same IP.
+    """
+
+    enriched_documents = []
+    intelligence_cache = {}
+
+    for event in events:
+        source_ip = event.get("source_ip")
+
+        if not source_ip:
+            continue
+
+        if source_ip not in intelligence_cache:
+            intelligence_cache[source_ip] = build_intelligence_summary(source_ip)
+            cache_status = "miss"
+        else:
+            cache_status = "hit"
+
+        summary = intelligence_cache[source_ip]
+
+        elastic_doc = convert_to_elastic_document(
+            event,
+            summary
+        )
+
+        elastic_doc["elastic_metadata"]["cache_status"] = cache_status
+        elastic_doc["elastic_metadata"]["cache_key"] = source_ip
+
+        enriched_documents.append(elastic_doc)
+
+    return enriched_documents
+
+# ── Batch Summary ────────────────────────────────────────────────
+def summarize_enriched_batch(enriched_documents: list) -> dict:
+    summary = {
+        "total_events": len(enriched_documents),
+        "severity_counts": {},
+        "classification_counts": {},
+        "cache_counts": {},
+        "top_source_ips": {},
+        "critical_events": [],
+    }
+
+    for doc in enriched_documents:
+        severity = doc.get("threat", {}).get("severity", "UNKNOWN")
+        classification = doc.get("investigation", {}).get("classification", "unknown")
+        cache_status = doc.get("elastic_metadata", {}).get("cache_status", "unknown")
+        source_ip = doc.get("source", {}).get("ip")
+
+        summary["severity_counts"][severity] = (
+            summary["severity_counts"].get(severity, 0) + 1
+        )
+
+        summary["classification_counts"][classification] = (
+            summary["classification_counts"].get(classification, 0) + 1
+        )
+
+        summary["cache_counts"][cache_status] = (
+            summary["cache_counts"].get(cache_status, 0) + 1
+        )
+
+        if source_ip:
+            summary["top_source_ips"][source_ip] = (
+                summary["top_source_ips"].get(source_ip, 0) + 1
+            )
+
+        if severity == "CRITICAL":
+            summary["critical_events"].append({
+                "source_ip": source_ip,
+                "destination_port": doc.get("destination", {}).get("port"),
+                "attack_type": doc.get("stingar", {}).get("attack_type"),
+                "campaign": doc.get("campaign", {}).get("name"),
+                "threat_actor": doc.get("threat_actor", {}).get("name"),
+            })
+
+    return summary
+
+
 #testing block
 if __name__ == "__main__":
 
@@ -2135,3 +2219,53 @@ sample_events = [
 batch_docs = enrich_honeypot_events(sample_events)
 
 print(json.dumps(batch_docs, indent=2))
+
+print("\nBATCH ELASTIC DOCUMENT CACHE TEST")
+
+sample_events_with_duplicates = [
+    {
+        "source_ip": "203.0.113.42",
+        "source_port": 55231,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 22,
+        "protocol": "ssh",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "cowrie",
+        "attack_type": "ssh_bruteforce",
+    },
+    {
+        "source_ip": "203.0.113.42",
+        "source_port": 55232,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 23,
+        "protocol": "telnet",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "cowrie",
+        "attack_type": "telnet_probe",
+    },
+    {
+        "source_ip": "198.235.24.10",
+        "source_port": 49530,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 8080,
+        "protocol": "http",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "web_honeypot",
+        "attack_type": "service_probe",
+    },
+]
+
+cached_docs = enrich_honeypot_events_with_cache(
+    sample_events_with_duplicates
+)
+
+print(json.dumps(cached_docs, indent=2))
+
+print("\nBATCH SUMMARY TEST")
+
+batch_summary = summarize_enriched_batch(cached_docs)
+
+print(json.dumps(batch_summary, indent=2))
