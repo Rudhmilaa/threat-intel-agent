@@ -1936,6 +1936,97 @@ def summarize_enriched_batch(enriched_documents: list) -> dict:
 
     return summary
 
+# ── Cluster Incidents ────────────────────────────────────────────────
+
+def get_cluster_recommended_action(severity: str) -> str:
+
+    if severity == "CRITICAL":
+        return (
+            "Escalate to incident response, block source IP, "
+            "and investigate related IOCs."
+        )
+
+    elif severity == "HIGH":
+        return (
+            "Prioritize analyst review and search for related activity."
+        )
+
+    elif severity == "MEDIUM":
+        return (
+            "Monitor and review supporting telemetry."
+        )
+
+    elif severity == "LOW":
+        return (
+            "Track for recurrence."
+        )
+
+    return (
+        "Suppress or monitor as informational activity."
+    )
+
+
+def build_incident_clusters(enriched_documents: list) -> list:
+    """
+    Group related enriched events into incidents.
+    """
+
+    clusters = {}
+
+    for doc in enriched_documents:
+
+        source_ip = doc["source"]["ip"]
+
+        campaign = doc["campaign"]["name"]
+
+        actor = doc["threat_actor"]["name"]
+
+        cluster_key = f"{source_ip}|{campaign}"
+
+        if cluster_key not in clusters:
+
+            clusters[cluster_key] = {
+                "incident_id": f"incident-{abs(hash(cluster_key)) % 100000}",
+                "source_ip": source_ip,
+                "campaign": campaign,
+                "threat_actor": actor,
+                "severity": doc["threat"]["severity"],
+                "recommended_action": get_cluster_recommended_action(
+                    doc["threat"]["severity"]
+                ),
+                "event_count": 0,
+                "attack_types": set(),
+                "destination_ports": set(),
+            }
+
+        cluster = clusters[cluster_key]
+
+        cluster["event_count"] += 1
+
+        cluster["attack_types"].add(
+            doc["stingar"]["attack_type"]
+        )
+
+        cluster["destination_ports"].add(
+            doc["destination"]["port"]
+        )
+
+    results = []
+
+    for cluster in clusters.values():
+
+        cluster["attack_types"] = sorted(
+            list(cluster["attack_types"])
+        )
+
+        cluster["destination_ports"] = sorted(
+            list(cluster["destination_ports"])
+        )
+
+        results.append(cluster)
+
+    return results
+
 
 #testing block
 if __name__ == "__main__":
@@ -2269,3 +2360,14 @@ print("\nBATCH SUMMARY TEST")
 batch_summary = summarize_enriched_batch(cached_docs)
 
 print(json.dumps(batch_summary, indent=2))
+
+print("\nINCIDENT CLUSTER TEST")
+
+clusters = build_incident_clusters(
+    cached_docs
+)
+
+print(json.dumps(
+    clusters,
+    indent=2
+))
