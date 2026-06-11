@@ -6,6 +6,7 @@ import requests
 
 # Hardcode the key directly for now
 from dotenv import load_dotenv
+from datetime import datetime, timezone
 import os
 
 STANDARD_IOC_TYPES = {
@@ -249,6 +250,20 @@ tools = [
             "required": ["ip_address"],
         },
     },
+    {
+    "name": "build_intelligence_summary_tool",
+    "description": "Build a full intelligence summary for an IP address, including enriched severity, investigation classification, campaign profile, and threat actor attribution.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "ip_address": {
+                "type": "string",
+                "description": "The IP address to summarize.",
+            }
+        },
+        "required": ["ip_address"],
+    },
+},
 ]
 
 print(f"Defined {len(tools)} tools: {[t['name'] for t in tools]}")
@@ -880,6 +895,189 @@ def classify_investigation_outcome_tool(ip_address: str) -> dict:
         timeline_data=timeline_data,
     )
 
+# ── Broadens IP Scheme ────────────────────────────────────────────────
+
+def build_campaign_profile(ioc: str, ioc_type: str) -> dict:
+    related_data = find_related_iocs(ioc, ioc_type)
+
+    malware_families = related_data.get("malware_families", [])
+    related_ips = related_data.get("related_ips", [])
+    related_domains = related_data.get("related_domains", [])
+    related_hashes = related_data.get("related_hashes", [])
+
+    campaign_name = "Unknown Campaign"
+    campaign_type = "unknown"
+    priority = "medium"
+    confidence = 50
+
+    if "Emotet" in malware_families:
+        campaign_name = "Emotet Infrastructure Cluster"
+        campaign_type = "botnet_c2"
+        priority = "critical"
+        confidence = 90
+
+    elif "Trickbot" in malware_families:
+        campaign_name = "Trickbot Infrastructure Cluster"
+        campaign_type = "credential_theft"
+        priority = "high"
+        confidence = 85
+
+    return {
+        "campaign_name": campaign_name,
+        "campaign_type": campaign_type,
+        "campaign_confidence": confidence,
+        "priority": priority,
+        "malware_families": malware_families,
+        "related_ips": related_ips,
+        "related_domains": related_domains,
+        "related_hashes": related_hashes,
+    }
+
+# ── Threat Actor Attribution ────────────────────────────────────────────────
+def attribute_threat_actor(campaign_profile: dict) -> dict:
+    malware_families = campaign_profile.get(
+        "malware_families",
+        []
+    )
+
+    actor = "Unknown"
+    confidence = 0
+    motivation = "Unknown"
+
+    if "Emotet" in malware_families:
+        actor = "TA505"
+        confidence = 90
+        motivation = "Financially Motivated Cybercrime"
+
+    elif "Trickbot" in malware_families:
+        actor = "Wizard Spider"
+        confidence = 85
+        motivation = "Financially Motivated Cybercrime"
+
+    return {
+        "threat_actor": actor,
+        "attribution_confidence": confidence,
+        "motivation": motivation,
+    }
+
+# ── Full Intelligence Summary ────────────────────────────────────────────────
+
+def build_intelligence_summary(
+    ip_address: str
+) -> dict:
+
+    severity = calculate_enriched_severity_tool(
+        ip_address
+    )
+
+    investigation = classify_investigation_outcome_tool(
+        ip_address
+    )
+
+    campaign = build_campaign_profile(
+        ip_address,
+        "ip_address"
+    )
+
+    actor = attribute_threat_actor(
+        campaign
+    )
+
+    return {
+        "indicator": ip_address,
+        "severity": severity,
+        "investigation": investigation,
+        "campaign": campaign,
+        "threat_actor": actor,
+    }
+
+# ── Convert to Elastic Document ────────────────────────────────────────────────
+def convert_to_elastic_document(
+    honeypot_event: dict,
+    intelligence_summary: dict
+) -> dict:
+    """
+    Converts a STINGAR honeypot event + enrichment output
+    into an Elasticsearch-ready document.
+    """
+
+    severity = intelligence_summary.get("severity", {})
+    investigation = intelligence_summary.get("investigation", {})
+    campaign = intelligence_summary.get("campaign", {})
+    threat_actor = intelligence_summary.get("threat_actor", {})
+
+    return {
+        "@timestamp": datetime.now(timezone.utc).isoformat(),
+
+        "event": {
+            "source": "stingar_honeypot",
+            "type": "honeypot_attack",
+            "original": honeypot_event,
+        },
+
+        "source": {
+            "ip": honeypot_event.get("source_ip"),
+            "port": honeypot_event.get("source_port"),
+        },
+
+        "destination": {
+            "ip": honeypot_event.get("destination_ip"),
+            "port": honeypot_event.get("destination_port"),
+        },
+
+        "network": {
+            "protocol": honeypot_event.get("protocol"),
+            "transport": honeypot_event.get("transport", "tcp"),
+        },
+
+        "stingar": {
+            "sensor_id": honeypot_event.get("sensor_id"),
+            "honeypot_type": honeypot_event.get("honeypot_type"),
+            "attack_type": honeypot_event.get("attack_type"),
+        },
+
+        "threat": {
+            "indicator": {
+                "ip": intelligence_summary.get("indicator"),
+                "type": "ip_address",
+            },
+            "severity": severity.get("severity"),
+            "threat_score": severity.get("threat_score"),
+            "confidence_score": severity.get("confidence_score"),
+            "risk_factors": severity.get("risk_factors", []),
+        },
+
+        "investigation": {
+            "classification": investigation.get("investigation_classification"),
+            "category": investigation.get("category"),
+            "priority": investigation.get("priority"),
+            "reasons": investigation.get("reasons", []),
+        },
+
+        "campaign": {
+            "name": campaign.get("campaign_name"),
+            "type": campaign.get("campaign_type"),
+            "confidence": campaign.get("campaign_confidence"),
+            "priority": campaign.get("priority"),
+            "malware_families": campaign.get("malware_families", []),
+            "related_ips": campaign.get("related_ips", []),
+            "related_domains": campaign.get("related_domains", []),
+            "related_hashes": campaign.get("related_hashes", []),
+        },
+
+        "threat_actor": {
+            "name": threat_actor.get("threat_actor"),
+            "confidence": threat_actor.get("attribution_confidence"),
+            "motivation": threat_actor.get("motivation"),
+        },
+
+        "elastic_metadata": {
+            "document_type": "stingar_enriched_honeypot_event",
+            "pipeline": "threat_intelligence_enrichment",
+            "version": "1.0",
+        },
+    }
+
 # ── Actual Threat Report ────────────────────────────────────────────────
 
 def generate_threat_report(ioc: str, data: dict) -> str:
@@ -1067,6 +1265,12 @@ def display_relationship_graph(graph):
 
 # ── STAGE 4: Agent Loop ────────────────────────────────────────────────
 SYSTEM_PROMPT = """
+
+Important:
+- For IP address investigations, call build_intelligence_summary_tool first.
+- If build_intelligence_summary_tool returns a complete summary, do not call any other tools.
+- Only call additional tools if the summary is missing critical information.
+
 You are a senior cyber threat intelligence analyst.
 
 When investigating an IOC, use the available tools to enrich it efficiently.
@@ -1078,13 +1282,8 @@ Tool budget:
 - Do not call get_mitre_techniques more than once per investigation.
 
 For IP addresses:
-- First analyze whether the IP is IPv4 or IPv6.
-- Check whether the IP is a known scanner.
-- Check whether the IP belongs to Tor, VPN, proxy, or suspicious hosting infrastructure.
-- Check GreyNoise-style classification to distinguish benign internet noise from malicious activity.
-- Check reputation and related IOCs.
-- Check timeline data to understand first seen, last seen, observation count, and trend.
-- Use calculate_enriched_severity_tool to produce the final threat score, confidence score, severity, and risk factors.
+- Use build_intelligence_summary_tool as the primary enrichment workflow.
+- Do not manually call individual IP enrichment tools unless the summary is incomplete.
 
 For domains:
 - Check domain reputation.
@@ -1128,6 +1327,7 @@ def process_tool_call(tool_name: str, tool_input: dict) -> str:
         "classify_anonymizer_network": lambda inp: classify_anonymizer_network(inp["ip_address"]),
         "calculate_enriched_severity_tool": lambda inp: calculate_enriched_severity_tool(inp["ip_address"]),
         "classify_investigation_outcome_tool": lambda inp: classify_investigation_outcome_tool(inp["ip_address"]),
+        "build_intelligence_summary_tool": lambda inp: build_intelligence_summary(inp["ip_address"]),
     }
     handler = handlers.get(tool_name)
     if handler is None:
@@ -1632,6 +1832,27 @@ def lookup_ioc_timeline(ioc: str, ioc_type: str) -> dict:
         }
     )
 
+# ── Multiple Honeypot Events ────────────────────────────────────────────────
+def enrich_honeypot_events(events: list) -> list:
+    enriched_documents = []
+
+    for event in events:
+        source_ip = event.get("source_ip")
+
+        if not source_ip:
+            continue
+
+        summary = build_intelligence_summary(source_ip)
+
+        elastic_doc = convert_to_elastic_document(
+            event,
+            summary
+        )
+
+        enriched_documents.append(elastic_doc)
+
+    return enriched_documents
+
 #testing block
 if __name__ == "__main__":
 
@@ -1805,3 +2026,112 @@ if __name__ == "__main__":
         classify_investigation_outcome_tool("203.0.113.42"),
         indent=2
     ))
+
+    print("\nCAMPAIGN PROFILE TEST")
+
+    print(json.dumps(
+        build_campaign_profile(
+            "203.0.113.42",
+            "ip_address"
+        ),
+        indent=2
+    ))
+
+    print("\nTHREAT ACTOR TEST")
+
+    campaign = build_campaign_profile(
+        "203.0.113.42",
+        "ip_address"
+    )
+
+    print(json.dumps(
+        attribute_threat_actor(campaign),
+        indent=2
+    ))
+
+    print("\nFULL INTELLIGENCE SUMMARY")
+
+    print(json.dumps(
+        build_intelligence_summary(
+            "203.0.113.42"
+        ),
+        indent=2
+    ))
+
+    print("\nFULL INTELLIGENCE SUMMARY TOOL TEST")
+    print(json.dumps(
+        build_intelligence_summary("203.0.113.42"),
+        indent=2
+    ))
+
+    #temp testing block 
+
+    # print("\nREAL CLAUDE FULL SUMMARY TEST")
+
+    # analysis, tool_calls = run_threat_intel_agent(
+    #     "203.0.113.42",
+    #     "ip_address"
+    # )
+
+    # print(f"\nClaude used {len(tool_calls)} tool(s):")
+    # for call in tool_calls:
+    #     print(f"- {call['tool']} {call['input']}")
+
+    # print("\nClaude Analysis:")
+    # print(analysis)
+
+    print("\nELASTIC DOCUMENT TEST")
+
+    sample_honeypot_event = {
+        "source_ip": "203.0.113.42",
+        "source_port": 55231,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 22,
+        "protocol": "ssh",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "cowrie",
+        "attack_type": "ssh_bruteforce",
+    }
+
+    summary = build_intelligence_summary(
+        sample_honeypot_event["source_ip"]
+    )
+
+    elastic_doc = convert_to_elastic_document(
+        sample_honeypot_event,
+        summary
+    )
+
+    print(json.dumps(elastic_doc, indent=2))
+
+    print("\nBATCH ELASTIC DOCUMENT TEST")
+
+sample_events = [
+    {
+        "source_ip": "203.0.113.42",
+        "source_port": 55231,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 22,
+        "protocol": "ssh",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "cowrie",
+        "attack_type": "ssh_bruteforce",
+    },
+    {
+        "source_ip": "198.235.24.10",
+        "source_port": 49530,
+        "destination_ip": "10.0.0.25",
+        "destination_port": 8080,
+        "protocol": "http",
+        "transport": "tcp",
+        "sensor_id": "stingar-duke-sensor-01",
+        "honeypot_type": "web_honeypot",
+        "attack_type": "service_probe",
+    },
+]
+
+batch_docs = enrich_honeypot_events(sample_events)
+
+print(json.dumps(batch_docs, indent=2))
