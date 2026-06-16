@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from central.auth import require_api_key
+from threat_intel.cache import get_cache_backend
 from threat_intel.pipeline import enrich_events_for_client, enrich_ip_for_client, enrich_ips_for_client
 from threat_intel.protocols import (
     build_enrich_ip_response,
@@ -16,6 +18,7 @@ from threat_intel.protocols import (
     validate_honeypot_event,
 )
 from threat_intel.scanners import ScannerRegistry
+from threat_intel.webhook_events import extract_events
 
 load_dotenv()
 
@@ -25,10 +28,8 @@ app = FastAPI(
         "Receives STINGAR honeypot events and new IP addresses from remote clients, "
         "runs enrichment/scoring/classification, and returns Elasticsearch-ready documents."
     ),
-    version="1.0.0",
+    version="1.1.0",
 )
-
-_central_intelligence_cache: dict[str, dict] = {}
 
 
 class EnrichEventsRequest(BaseModel):
@@ -56,16 +57,22 @@ class ScannerEntryRequest(BaseModel):
     scanner: dict
 
 
-class RemoveScannerRequest(BaseModel):
-    client_id: str
-
-
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "central-enrichment-server"}
+    cache = get_cache_backend()
+    return {
+        "status": "ok",
+        "service": "central-enrichment-server",
+        "cache": cache.stats(),
+    }
 
 
-@app.post("/api/v1/enrich/events")
+@app.get("/api/v1/cache/stats", dependencies=[Depends(require_api_key)])
+def cache_stats():
+    return get_cache_backend().stats()
+
+
+@app.post("/api/v1/enrich/events", dependencies=[Depends(require_api_key)])
 def enrich_events(request: EnrichEventsRequest):
     validation_errors = []
     for index, event in enumerate(request.events):
@@ -76,29 +83,84 @@ def enrich_events(request: EnrichEventsRequest):
     if validation_errors:
         raise HTTPException(status_code=400, detail=validation_errors)
 
-    client_cache = _central_intelligence_cache.setdefault(request.client_id, {})
-    result = enrich_events_for_client(
+    return enrich_events_for_client(
         events=request.events,
         client_id=request.client_id,
         new_ips=request.new_ips,
-        intelligence_cache=client_cache,
+        cache_backend=get_cache_backend(),
     )
-    _central_intelligence_cache[request.client_id] = result.pop("intelligence_cache")
-    return result
 
 
-@app.post("/api/v1/enrich/ip")
+@app.post("/api/v1/enrich/ip", dependencies=[Depends(require_api_key)])
 def enrich_ip(request: EnrichIpRequest):
-    summary = enrich_ip_for_client(request.ip_address, request.client_id)
+    summary = enrich_ip_for_client(
+        request.ip_address,
+        request.client_id,
+        cache_backend=get_cache_backend(),
+    )
     return build_enrich_ip_response(request.client_id, request.ip_address, summary)
 
 
-@app.post("/api/v1/enrich/ips")
+@app.post("/api/v1/enrich/ips", dependencies=[Depends(require_api_key)])
 def enrich_ips(request: EnrichIpsRequest):
-    return enrich_ips_for_client(request.ip_addresses, request.client_id)
+    return enrich_ips_for_client(
+        request.ip_addresses,
+        request.client_id,
+        cache_backend=get_cache_backend(),
+    )
 
 
-@app.get("/api/v1/scanners")
+def _process_stingar_webhook(client_id: str, payload: dict[str, Any]) -> dict:
+    events = extract_events(payload, default_sensor_id=payload.get("sensor_id"))
+    if not events:
+        raise HTTPException(status_code=400, detail="No events found in webhook payload.")
+
+    validation_errors = []
+    for index, event in enumerate(events):
+        errors = validate_honeypot_event(event)
+        for error in errors:
+            validation_errors.append(f"events[{index}]: {error}")
+
+    if validation_errors:
+        raise HTTPException(status_code=400, detail=validation_errors)
+
+    result = enrich_events_for_client(
+        events=events,
+        client_id=client_id,
+        cache_backend=get_cache_backend(),
+        auto_detect_new_ips=True,
+    )
+    result["webhook"] = {
+        "received_events": len(events),
+        "auto_detected_new_ips": result["enrichment_stats"]["new_ips_submitted"],
+    }
+    return result
+
+
+@app.post("/api/v1/webhooks/stingar", dependencies=[Depends(require_api_key)])
+async def stingar_webhook(request: Request):
+    """
+    STINGAR push endpoint.
+
+    Configure your honeypot/STINGAR deployment to POST events here. Central will
+    auto-detect new source IPs using the persistent cache and enrich only those.
+    """
+    payload: dict[str, Any] = await request.json()
+    client_id = payload.get("client_id")
+    if not client_id:
+        raise HTTPException(status_code=400, detail="Missing required field: client_id")
+
+    return _process_stingar_webhook(client_id, payload)
+
+
+@app.post("/api/v1/webhooks/stingar/{client_id}", dependencies=[Depends(require_api_key)])
+async def stingar_webhook_for_client(client_id: str, request: Request):
+    payload: dict[str, Any] = await request.json()
+    payload["client_id"] = client_id
+    return _process_stingar_webhook(client_id, payload)
+
+
+@app.get("/api/v1/scanners", dependencies=[Depends(require_api_key)])
 def list_scanners(client_id: Optional[str] = None):
     registry = ScannerRegistry.for_client(client_id)
     return {
@@ -107,13 +169,13 @@ def list_scanners(client_id: Optional[str] = None):
     }
 
 
-@app.get("/api/v1/scanners/table")
+@app.get("/api/v1/scanners/table", dependencies=[Depends(require_api_key)])
 def scanner_table(client_id: Optional[str] = None):
     registry = ScannerRegistry.for_client(client_id)
     return build_scanner_table_response(client_id, registry.scanner_table())
 
 
-@app.post("/api/v1/scanners")
+@app.post("/api/v1/scanners", dependencies=[Depends(require_api_key)])
 def add_client_scanner(request: ScannerEntryRequest):
     registry = ScannerRegistry.for_client(request.client_id)
     try:
@@ -124,7 +186,7 @@ def add_client_scanner(request: ScannerEntryRequest):
     return {"client_id": request.client_id, "scanner": created}
 
 
-@app.delete("/api/v1/scanners/{scanner_id}")
+@app.delete("/api/v1/scanners/{scanner_id}", dependencies=[Depends(require_api_key)])
 def remove_client_scanner(scanner_id: str, client_id: str):
     registry = ScannerRegistry.for_client(client_id)
     removed = registry.remove_client_scanner(scanner_id, persist=True)

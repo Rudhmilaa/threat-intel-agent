@@ -137,8 +137,93 @@ Example request:
 1. **STINGAR client** persists every source IP it has ever forwarded in `.stingar_seen_ips.json`.
 2. On each batch, the client computes `new_ips = source_ips - seen_ips`.
 3. The client sends the full event batch plus the `new_ips` list.
-4. **Central server** enriches fresh summaries for `new_ips` and reuses its own in-memory cache for repeat IPs.
+4. **Central server** enriches fresh summaries for `new_ips` and reuses its persistent cache (SQLite or Redis) for repeat IPs.
 5. After a successful response, the STINGAR client marks all batch source IPs as seen.
+
+### Persistent central cache
+
+Central stores intelligence summaries in a persistent backend so enrichment survives restarts.
+
+| Setting | Default | Description |
+|---|---|---|
+| `CENTRAL_CACHE_BACKEND` | `sqlite` | `sqlite` or `redis` |
+| `CENTRAL_CACHE_SQLITE_PATH` | `data/central_cache.db` | SQLite database path |
+| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL when backend is `redis` |
+
+Check cache stats:
+
+```bash
+curl http://127.0.0.1:8080/health
+curl -H "Authorization: Bearer $CENTRAL_API_KEY" http://127.0.0.1:8080/api/v1/cache/stats
+```
+
+### API authentication
+
+Protected endpoints require a Bearer token when keys are configured.
+
+| Setting | Description |
+|---|---|
+| `CENTRAL_API_KEY` | Master key accepted by all clients |
+| `CENTRAL_CLIENT_API_KEYS` | JSON map of `{client_id: api_key}` |
+| `config/clients/api_keys.json` | File-based per-client keys (copy from `api_keys.example.json`) |
+
+If no keys are configured, auth is disabled for local development.
+
+Example authenticated request:
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/enrich/events \
+  -H "Authorization: Bearer $CENTRAL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"client_id":"example-stingar-01","events":[...],"new_ips":["203.0.113.42"]}'
+```
+
+### Webhook ingestion
+
+Two webhook options are supported:
+
+**Option A — STINGAR pushes directly to central**
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/webhooks/stingar/example-stingar-01 \
+  -H "Authorization: Bearer $CENTRAL_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [
+      {
+        "source_ip": "203.0.113.42",
+        "destination_ip": "10.0.0.25",
+        "destination_port": 22,
+        "attack_type": "ssh_bruteforce",
+        "protocol": "ssh",
+        "honeypot_type": "cowrie"
+      }
+    ]
+  }'
+```
+
+Central auto-detects new IPs from its persistent cache — no `new_ips` field required.
+
+**Option B — Local listener on the STINGAR server**
+
+Run a lightweight receiver that normalizes honeypot payloads and forwards to central:
+
+```bash
+export CENTRAL_ENRICHMENT_URL=http://central-host:8080
+export STINGAR_CLIENT_ID=example-stingar-01
+export CENTRAL_API_KEY=your-key
+export STINGAR_WEBHOOK_SECRET=optional-local-secret
+
+python -m stingar.webhook_listener
+# listens on http://0.0.0.0:8090
+```
+
+Point Cowrie/STINGAR HTTP output to:
+
+```bash
+POST http://stingar-host:8090/webhook/stingar
+Header: X-Webhook-Secret: optional-local-secret
+```
 
 ### Running the distributed stack
 
@@ -167,16 +252,19 @@ curl -X POST http://127.0.0.1:8080/api/v1/enrich/ips \
 
 ### Central API endpoints
 
-| Method | Path | Purpose |
-|---|---|---|
-| `GET` | `/health` | Health check |
-| `POST` | `/api/v1/enrich/events` | Full STINGAR batch pipeline |
-| `POST` | `/api/v1/enrich/ip` | Single IP intelligence summary |
-| `POST` | `/api/v1/enrich/ips` | Batch IP summaries |
-| `GET` | `/api/v1/scanners?client_id=` | List merged scanner definitions |
-| `GET` | `/api/v1/scanners/table?client_id=` | Flat CIDR table (one row per range) |
-| `POST` | `/api/v1/scanners` | Add a client-owned scanner |
-| `DELETE` | `/api/v1/scanners/{scanner_id}?client_id=` | Remove a client-owned scanner |
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/health` | No | Health check + cache stats |
+| `GET` | `/api/v1/cache/stats` | Yes | Cache backend statistics |
+| `POST` | `/api/v1/enrich/events` | Yes | Full STINGAR batch pipeline |
+| `POST` | `/api/v1/enrich/ip` | Yes | Single IP intelligence summary |
+| `POST` | `/api/v1/enrich/ips` | Yes | Batch IP summaries |
+| `POST` | `/api/v1/webhooks/stingar` | Yes | STINGAR push webhook (client_id in body) |
+| `POST` | `/api/v1/webhooks/stingar/{client_id}` | Yes | STINGAR push webhook (client_id in path) |
+| `GET` | `/api/v1/scanners?client_id=` | Yes | List merged scanner definitions |
+| `GET` | `/api/v1/scanners/table?client_id=` | Yes | Flat CIDR table (one row per range) |
+| `POST` | `/api/v1/scanners` | Yes | Add a client-owned scanner |
+| `DELETE` | `/api/v1/scanners/{scanner_id}?client_id=` | Yes | Remove a client-owned scanner |
 
 ### Known scanner CIDR tables
 
@@ -329,12 +417,15 @@ threat-intel-agent/
 ├── central/
 │   └── server.py                   # FastAPI central enrichment server
 ├── stingar/
-│   └── client.py                   # STINGAR-side client + seen-IP store
+│   ├── client.py                   # STINGAR-side client + seen-IP store
+│   └── webhook_listener.py         # Local webhook receiver for honeypot pushes
 ├── config/
 │   ├── scanners/
 │   │   └── default_scanners.json   # Global scanner CIDR table
 │   └── clients/
-│       └── {client_id}_scanners.json  # Per-client scanner overrides
+│       ├── {client_id}_scanners.json  # Per-client scanner overrides
+│       └── api_keys.example.json      # Per-client API key template
+├── data/                           # SQLite cache (gitignored)
 ├── requirements.txt
 ├── .env                            # API keys (not committed)
 └── README.md
@@ -384,7 +475,13 @@ ABUSEIPDB_API_KEY=your_abuseipdb_api_key_here
 | `STINGAR_SENSOR_ID` | STINGAR client | Default sensor ID attached to submitted batches |
 | `STINGAR_SEEN_IP_STORE` | STINGAR client | Path to local seen-IP JSON store (default: `.stingar_seen_ips.json`) |
 | `CENTRAL_HOST` / `CENTRAL_PORT` | Central server | Bind address for FastAPI (default: `0.0.0.0:8080`) |
-| `CENTRAL_API_KEY` | Optional | Bearer token for central API auth (future hook) |
+| `CENTRAL_API_KEY` | Optional | Master Bearer token for central API auth |
+| `CENTRAL_CLIENT_API_KEYS` | Optional | JSON map of per-client API keys |
+| `CENTRAL_CACHE_BACKEND` | Central server | `sqlite` (default) or `redis` |
+| `CENTRAL_CACHE_SQLITE_PATH` | Central server | SQLite cache database path |
+| `REDIS_URL` | Central server | Redis URL when using redis cache backend |
+| `STINGAR_WEBHOOK_HOST` / `STINGAR_WEBHOOK_PORT` | STINGAR listener | Bind address (default `0.0.0.0:8090`) |
+| `STINGAR_WEBHOOK_SECRET` | STINGAR listener | Optional shared secret for local webhook auth |
 
 Additional constants in `main.py`:
 

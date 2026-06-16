@@ -4,3 +4,5 @@
 __pycache__/
 threat_report.json
 .stingar_seen_ips.json
+data/
+config/clients/api_keys.json

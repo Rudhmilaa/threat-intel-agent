@@ -1,0 +1,6 @@
+{
+  "description": "Per-client API keys for central enrichment server authentication. Copy to api_keys.json and set real keys.",
+  "clients": {
+    "example-stingar-01": "replace-with-client-specific-api-key"
+  }
+}
