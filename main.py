@@ -4,10 +4,10 @@ import anthropic
 import os
 import requests
 
-# Hardcode the key directly for now
 from dotenv import load_dotenv
 from datetime import datetime, timezone
-import os
+
+from threat_intel.scanners import ScannerRegistry, classify_known_scanner, configure_scanners
 
 STANDARD_IOC_TYPES = {
     "ip": "ip_address",
@@ -29,6 +29,7 @@ def standardize_ioc_type(ioc_type: str) -> str:
     return STANDARD_IOC_TYPES.get(normalized, "unknown")
 
 load_dotenv()
+configure_scanners(ScannerRegistry.for_client())
 
 client = anthropic.Anthropic(
     api_key=os.getenv("ANTHROPIC_API_KEY")
@@ -494,6 +495,17 @@ def get_mitre_techniques(query: str) -> dict:
             "detection_suggestions": [
                 "Monitor for anomalous SMB traffic patterns",
                 "Track authentication events across endpoints",
+            ],
+        },
+        "reconnaissance": {
+            "techniques": [
+                {"id": "T1046", "name": "Network Service Discovery", "tactic": "Discovery"},
+                {"id": "T1595.002", "name": "Vulnerability Scanning", "tactic": "Reconnaissance"},
+            ],
+            "associated_groups": ["Censys", "Shodan", "Palo Alto Cortex Xpanse"],
+            "detection_suggestions": [
+                "Track port scanning and service enumeration across honeypot sensors",
+                "Correlate probe activity with known scanner infrastructure ranges",
             ],
         },
     }
@@ -1581,114 +1593,11 @@ def find_related_iocs(ioc: str, ioc_type: str) -> dict:
     return related_database[ioc]
 
 # ── STAGE 7: Known Scanner Classification Tool ──────────────────────────────────
-def classify_known_scanner(ip_address: str) -> dict:
-    """
-    Classifies whether an IP belongs to known internet scanning infrastructure.
-    This helps avoid over-labeling benign scanner traffic as malicious.
-    """
-
-    known_scanner_ranges = [
-        {
-            "company": "Palo Alto Networks Cortex Xpanse",
-            "category": "attack_surface_scanner",
-            "ranges": [
-                "35.203.210.0/23",
-                "144.86.173.0/24",
-                "147.185.132.0/23",
-                "162.216.149.0/24",
-                "162.216.150.0/24",
-                "172.105.147.0/24",
-                "198.235.24.0/24",
-                "205.210.31.0/24",
-                "216.25.88.0/21",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Published Cortex Xpanse scanner range. Usually benign scanning, but still monitor if behavior is excessive.",
-        },
-        {
-            "company": "Censys",
-            "category": "internet_research_scanner",
-            "ranges": [
-                "162.142.125.0/24",
-                "167.94.138.0/24",
-                "167.94.145.0/24",
-                "167.94.146.0/24",
-                "167.248.133.0/24",
-                "199.45.154.0/24",
-                "199.45.155.0/24",
-                "206.168.34.0/24",
-                "206.168.35.0/24",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Censys scans public internet infrastructure for internet-wide measurement and attack surface visibility.",
-        },
-        {
-            "company": "Shodan",
-            "category": "internet_search_scanner",
-            "ranges": [
-                "207.90.244.0/24",
-            ],
-            "classification": "known_scanner",
-            "default_severity": "LOW",
-            "notes": "Shodan crawls internet-connected services. Treat as scanner traffic unless paired with exploit attempts or authentication failures.",
-        },
-    ]
-
-    ip_obj = ipaddress.ip_address(ip_address)
-
-    for scanner in known_scanner_ranges:
-        for network in scanner["ranges"]:
-            if ip_obj in ipaddress.ip_network(network):
-                return {
-                    "ip": ip_address,
-                    "is_known_scanner": True,
-                    "company": scanner["company"],
-                    "category": scanner["category"],
-                    "classification": scanner["classification"],
-                    "default_severity": scanner["default_severity"],
-                    "matched_range": network,
-                    "notes": scanner["notes"],
-                }
-
-    return {
-        "ip": ip_address,
-        "is_known_scanner": False,
-        "classification": "not_known_scanner",
-        "default_severity": "UNKNOWN",
-        "notes": "IP did not match known scanner ranges in the local scanner database.",
-    }
+# Scanner CIDR tables live in config/scanners/default_scanners.json with optional
+# per-client overrides in config/clients/{client_id}_scanners.json.
+# classify_known_scanner() is implemented in threat_intel.scanners.ScannerRegistry.
 
 # ── STAGE 8: IOC Timeline Tool ────────────────────────────────────────────────
-
-
-    ip_obj = ipaddress.ip_address(ip_address)
-
-    for scanner in known_scanner_ranges:
-        for network in scanner["ranges"]:
-            if ip_obj in ipaddress.ip_network(network):
-                return {
-                    "ip": ip_address,
-                    "is_known_scanner": True,
-                    "company": scanner["company"],
-                    "category": scanner["category"],
-                    "classification": scanner["classification"],
-                    "default_severity": scanner["default_severity"],
-                    "matched_range": network,
-                    "notes": scanner["notes"],
-                }
-
-    return {
-        "ip": ip_address,
-        "is_known_scanner": False,
-        "classification": "not_known_scanner",
-        "default_severity": "UNKNOWN",
-        "notes": "IP did not match known scanner ranges.",
-    }
-
-
-# Try all 3 sample cases without using the API
 # run_mock_agent("203.0.113.42", "ip_address")
 # run_mock_agent("d131dd02c5e6eec4693d9a0698aff95c", "file_hash")
 # run_mock_agent("secure-bankofamerica-login.com", "domain")
@@ -1966,6 +1875,121 @@ def get_cluster_recommended_action(severity: str) -> str:
     )
 
 
+HONEYPOT_ATTACK_TYPE_MITRE = {
+    "ssh_bruteforce": {
+        "techniques": [
+            {"id": "T1110.001", "name": "Password Guessing", "tactic": "Credential Access"},
+            {"id": "T1021.004", "name": "SSH", "tactic": "Lateral Movement"},
+        ],
+        "detection_suggestions": [
+            "Alert on repeated failed SSH authentication attempts from a single source IP",
+            "Monitor for successful SSH logins following brute-force patterns",
+        ],
+    },
+    "telnet_probe": {
+        "techniques": [
+            {"id": "T1110.001", "name": "Password Guessing", "tactic": "Credential Access"},
+            {"id": "T1046", "name": "Network Service Discovery", "tactic": "Discovery"},
+        ],
+        "detection_suggestions": [
+            "Monitor for Telnet connection attempts on deprecated or unexpected services",
+            "Correlate Telnet probes with credential-spray activity across sensors",
+        ],
+    },
+    "service_probe": {
+        "techniques": [
+            {"id": "T1046", "name": "Network Service Discovery", "tactic": "Discovery"},
+            {"id": "T1595.002", "name": "Vulnerability Scanning", "tactic": "Reconnaissance"},
+        ],
+        "detection_suggestions": [
+            "Track port scanning and service enumeration across honeypot sensors",
+            "Correlate probe activity with known scanner infrastructure ranges",
+        ],
+    },
+}
+
+CAMPAIGN_TYPE_MITRE_QUERY = {
+    "botnet_c2": "command and control",
+    "credential_theft": "credential theft",
+    "unknown": "reconnaissance",
+}
+
+MALWARE_FAMILY_MITRE_QUERY = {
+    "Emotet": "command and control",
+    "Trickbot": "credential theft",
+}
+
+
+def build_cluster_mitre_attack(cluster: dict) -> dict:
+    """
+    Map an incident cluster to MITRE ATT&CK techniques, tactics,
+    and detection suggestions using attack types, campaign context,
+    and malware families observed in the cluster.
+    """
+    techniques_by_id = {}
+    detection_suggestions = []
+    mapping_sources = []
+
+    for attack_type in cluster.get("attack_types", []):
+        attack_mapping = HONEYPOT_ATTACK_TYPE_MITRE.get(attack_type)
+        if not attack_mapping:
+            continue
+
+        mapping_sources.append(f"attack_type:{attack_type}")
+
+        for technique in attack_mapping.get("techniques", []):
+            techniques_by_id[technique["id"]] = technique
+
+        detection_suggestions.extend(
+            attack_mapping.get("detection_suggestions", [])
+        )
+
+    campaign_type = cluster.get("campaign_type", "unknown")
+    campaign_query = CAMPAIGN_TYPE_MITRE_QUERY.get(
+        campaign_type,
+        "reconnaissance",
+    )
+    campaign_mapping = get_mitre_techniques(campaign_query)
+
+    if campaign_mapping.get("techniques"):
+        mapping_sources.append(f"campaign_type:{campaign_type}")
+
+        for technique in campaign_mapping["techniques"]:
+            techniques_by_id[technique["id"]] = technique
+
+        detection_suggestions.extend(
+            campaign_mapping.get("detection_suggestions", [])
+        )
+
+    for malware_family in cluster.get("malware_families", []):
+        malware_query = MALWARE_FAMILY_MITRE_QUERY.get(malware_family)
+        if not malware_query:
+            continue
+
+        malware_mapping = get_mitre_techniques(malware_query)
+        if not malware_mapping.get("techniques"):
+            continue
+
+        mapping_sources.append(f"malware_family:{malware_family}")
+
+        for technique in malware_mapping["techniques"]:
+            techniques_by_id[technique["id"]] = technique
+
+        detection_suggestions.extend(
+            malware_mapping.get("detection_suggestions", [])
+        )
+
+    techniques = list(techniques_by_id.values())
+    tactics = sorted({technique["tactic"] for technique in techniques})
+
+    return {
+        "techniques": techniques,
+        "tactics": tactics,
+        "detection_suggestions": list(dict.fromkeys(detection_suggestions)),
+        "mapping_sources": mapping_sources,
+    }
+
+
 def build_incident_clusters(enriched_documents: list) -> list:
     """
     Group related enriched events into incidents.
@@ -1991,6 +2015,7 @@ def build_incident_clusters(enriched_documents: list) -> list:
                 "incident_id": f"incident-{abs(hash(cluster_key)) % 100000}",
                 "source_ip": source_ip,
                 "campaign": campaign,
+                "campaign_type": doc["campaign"].get("type", "unknown"),
                 "threat_actor": actor,
                 "severity": doc["threat"]["severity"],
                 "recommended_action": get_cluster_recommended_action(
@@ -2000,6 +2025,7 @@ def build_incident_clusters(enriched_documents: list) -> list:
                 "event_count": 0,
                 "attack_types": set(),
                 "destination_ports": set(),
+                "malware_families": set(),
             }
 
         cluster = clusters[cluster_key]
@@ -2014,6 +2040,9 @@ def build_incident_clusters(enriched_documents: list) -> list:
             doc["destination"]["port"]
         )
 
+        for family in doc["campaign"].get("malware_families", []):
+            cluster["malware_families"].add(family)
+
     results = []
 
     for cluster in clusters.values():
@@ -2025,6 +2054,12 @@ def build_incident_clusters(enriched_documents: list) -> list:
         cluster["destination_ports"] = sorted(
             list(cluster["destination_ports"])
         )
+
+        cluster["malware_families"] = sorted(
+            list(cluster["malware_families"])
+        )
+
+        cluster["mitre_attack"] = build_cluster_mitre_attack(cluster)
 
         results.append(cluster)
 
@@ -2403,103 +2438,103 @@ if __name__ == "__main__":
 
     print("\nBATCH ELASTIC DOCUMENT TEST")
 
-sample_events = [
-    {
-        "source_ip": "203.0.113.42",
-        "source_port": 55231,
-        "destination_ip": "10.0.0.25",
-        "destination_port": 22,
-        "protocol": "ssh",
-        "transport": "tcp",
-        "sensor_id": "stingar-duke-sensor-01",
-        "honeypot_type": "cowrie",
-        "attack_type": "ssh_bruteforce",
-    },
-    {
-        "source_ip": "198.235.24.10",
-        "source_port": 49530,
-        "destination_ip": "10.0.0.25",
-        "destination_port": 8080,
-        "protocol": "http",
-        "transport": "tcp",
-        "sensor_id": "stingar-duke-sensor-01",
-        "honeypot_type": "web_honeypot",
-        "attack_type": "service_probe",
-    },
-]
+    sample_events = [
+        {
+            "source_ip": "203.0.113.42",
+            "source_port": 55231,
+            "destination_ip": "10.0.0.25",
+            "destination_port": 22,
+            "protocol": "ssh",
+            "transport": "tcp",
+            "sensor_id": "stingar-duke-sensor-01",
+            "honeypot_type": "cowrie",
+            "attack_type": "ssh_bruteforce",
+        },
+        {
+            "source_ip": "198.235.24.10",
+            "source_port": 49530,
+            "destination_ip": "10.0.0.25",
+            "destination_port": 8080,
+            "protocol": "http",
+            "transport": "tcp",
+            "sensor_id": "stingar-duke-sensor-01",
+            "honeypot_type": "web_honeypot",
+            "attack_type": "service_probe",
+        },
+    ]
 
-batch_docs = enrich_honeypot_events(sample_events)
+    batch_docs = enrich_honeypot_events(sample_events)
 
-print(json.dumps(batch_docs, indent=2))
+    print(json.dumps(batch_docs, indent=2))
 
-print("\nBATCH ELASTIC DOCUMENT CACHE TEST")
+    print("\nBATCH ELASTIC DOCUMENT CACHE TEST")
 
-sample_events_with_duplicates = [
-    {
-        "source_ip": "203.0.113.42",
-        "source_port": 55231,
-        "destination_ip": "10.0.0.25",
-        "destination_port": 22,
-        "protocol": "ssh",
-        "transport": "tcp",
-        "sensor_id": "stingar-duke-sensor-01",
-        "honeypot_type": "cowrie",
-        "attack_type": "ssh_bruteforce",
-    },
-    {
-        "source_ip": "203.0.113.42",
-        "source_port": 55232,
-        "destination_ip": "10.0.0.25",
-        "destination_port": 23,
-        "protocol": "telnet",
-        "transport": "tcp",
-        "sensor_id": "stingar-duke-sensor-01",
-        "honeypot_type": "cowrie",
-        "attack_type": "telnet_probe",
-    },
-    {
-        "source_ip": "198.235.24.10",
-        "source_port": 49530,
-        "destination_ip": "10.0.0.25",
-        "destination_port": 8080,
-        "protocol": "http",
-        "transport": "tcp",
-        "sensor_id": "stingar-duke-sensor-01",
-        "honeypot_type": "web_honeypot",
-        "attack_type": "service_probe",
-    },
-]
+    sample_events_with_duplicates = [
+        {
+            "source_ip": "203.0.113.42",
+            "source_port": 55231,
+            "destination_ip": "10.0.0.25",
+            "destination_port": 22,
+            "protocol": "ssh",
+            "transport": "tcp",
+            "sensor_id": "stingar-duke-sensor-01",
+            "honeypot_type": "cowrie",
+            "attack_type": "ssh_bruteforce",
+        },
+        {
+            "source_ip": "203.0.113.42",
+            "source_port": 55232,
+            "destination_ip": "10.0.0.25",
+            "destination_port": 23,
+            "protocol": "telnet",
+            "transport": "tcp",
+            "sensor_id": "stingar-duke-sensor-01",
+            "honeypot_type": "cowrie",
+            "attack_type": "telnet_probe",
+        },
+        {
+            "source_ip": "198.235.24.10",
+            "source_port": 49530,
+            "destination_ip": "10.0.0.25",
+            "destination_port": 8080,
+            "protocol": "http",
+            "transport": "tcp",
+            "sensor_id": "stingar-duke-sensor-01",
+            "honeypot_type": "web_honeypot",
+            "attack_type": "service_probe",
+        },
+    ]
 
-cached_docs = enrich_honeypot_events_with_cache(
-    sample_events_with_duplicates
-)
+    cached_docs = enrich_honeypot_events_with_cache(
+        sample_events_with_duplicates
+    )
 
-print(json.dumps(cached_docs, indent=2))
+    print(json.dumps(cached_docs, indent=2))
 
-print("\nBATCH SUMMARY TEST")
+    print("\nBATCH SUMMARY TEST")
 
-batch_summary = summarize_enriched_batch(cached_docs)
+    batch_summary = summarize_enriched_batch(cached_docs)
 
-print(json.dumps(batch_summary, indent=2))
+    print(json.dumps(batch_summary, indent=2))
 
-print("\nINCIDENT CLUSTER TEST")
+    print("\nINCIDENT CLUSTER TEST")
 
-clusters = build_incident_clusters(
-    cached_docs
-)
+    clusters = build_incident_clusters(
+        cached_docs
+    )
 
-print(json.dumps(
-    clusters,
-    indent=2
-))
+    print(json.dumps(
+        clusters,
+        indent=2
+    ))
 
-print("\nPRIORITY QUEUE TEST")
+    print("\nPRIORITY QUEUE TEST")
 
-prioritized = prioritize_incidents(
-    clusters
-)
+    prioritized = prioritize_incidents(
+        clusters
+    )
 
-print(json.dumps(
-    prioritized,
-    indent=2
-))
+    print(json.dumps(
+        prioritized,
+        indent=2
+    ))

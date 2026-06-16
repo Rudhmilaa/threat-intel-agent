@@ -9,6 +9,7 @@ Built for security operations workflows — especially **STINGAR honeypot event 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Distributed Architecture](#distributed-architecture)
 - [Architecture](#architecture)
 - [Features](#features)
 - [Project Structure](#project-structure)
@@ -33,13 +34,187 @@ Built for security operations workflows — especially **STINGAR honeypot event 
 
 ## Overview
 
-This project is a single-file Python application (`main.py`) that implements a full threat intelligence enrichment stack:
+This project implements a full threat intelligence enrichment stack across three deployment roles:
 
-1. **Interactive IOC investigation** — Ask Claude to investigate an IP, domain, or file hash. Claude selects and calls enrichment tools, then writes a concise analyst report.
-2. **Deterministic enrichment** — Run enrichment functions directly (no LLM) for programmatic pipelines.
-3. **Honeypot batch processing** — Ingest STINGAR honeypot events, enrich source IPs, convert to Elasticsearch documents, cluster incidents, and prioritize analyst work.
+1. **Central enrichment server** (`central/server.py`) — receives honeypot events and new IPs from remote STINGAR nodes, runs enrichment, clustering, and prioritization.
+2. **STINGAR client** (`stingar/client.py`) — runs on each honeypot server, tracks seen IPs locally, and forwards only new source IPs to central.
+3. **Core library** (`main.py` + `threat_intel/`) — shared enrichment engines, scanner tables, MITRE mapping, and Claude agent loop.
 
-The design separates **severity scoring** (how dangerous is this?) from **investigation classification** (what kind of activity is this?). That distinction matters in practice: a Palo Alto Cortex Xpanse scanner may have thousands of AbuseIPDB reports but should be classified as benign scanner noise, not escalated as C2.
+The design separates **severity scoring** (how dangerous is this?) from **investigation classification** (what kind of activity is this?). That distinction matters in practice: a Palo Alto Cortex Xpanse or Shadowserver scanner may have thousands of AbuseIPDB reports but should be classified as benign scanner noise, not escalated as C2.
+
+---
+
+## Distributed Architecture
+
+```mermaid
+flowchart LR
+    subgraph StingarNode["STINGAR Honeypot Server"]
+        HP[Honeypot Events]
+        SEEN[Seen IP Store\n.stingar_seen_ips.json]
+        SC[stingar/client.py]
+    end
+
+    subgraph Central["Central Enrichment Server"]
+        API[central/server.py\nFastAPI]
+        CACHE[Central IP Cache]
+        ENR[threat_intel/pipeline.py]
+        SCAN[Scanner Registry\nCIDR tables]
+    end
+
+    subgraph Output
+        ES[Elasticsearch Documents]
+        CLU[Incident Clusters + MITRE]
+    end
+
+    HP --> SC
+    SC --> SEEN
+    SC -->|"POST /api/v1/enrich/events\nevents + new_ips"| API
+    API --> ENR
+    ENR --> SCAN
+    ENR --> CACHE
+    ENR --> ES
+    ENR --> CLU
+    API -->|"enriched_documents,\nprioritized_incidents"| SC
+```
+
+### What the STINGAR client sends
+
+| Field | Required | Description |
+|---|---|---|
+| `client_id` | Yes | Unique deployment ID (e.g. `duke-stingar-01`) |
+| `sensor_id` | No | STINGAR sensor name |
+| `events[]` | Yes | Full honeypot event batch |
+| `new_ips[]` | Yes | Source IPs seen for the first time on this node |
+
+Each honeypot event should include at minimum:
+
+| Field | Example | Purpose |
+|---|---|---|
+| `source_ip` | `203.0.113.42` | Attacker IP to enrich |
+| `destination_ip` | `10.0.0.25` | Honeypot target |
+| `destination_port` | `22` | Service targeted |
+| `attack_type` | `ssh_bruteforce` | Normalized attack label |
+| `protocol` | `ssh` | Application protocol |
+| `transport` | `tcp` | Transport layer |
+| `sensor_id` | `stingar-duke-sensor-01` | Originating sensor |
+| `honeypot_type` | `cowrie` | Honeypot implementation |
+
+Example request:
+
+```json
+{
+  "client_id": "example-stingar-01",
+  "sensor_id": "stingar-duke-sensor-01",
+  "new_ips": ["203.0.113.42"],
+  "events": [
+    {
+      "source_ip": "203.0.113.42",
+      "source_port": 55231,
+      "destination_ip": "10.0.0.25",
+      "destination_port": 22,
+      "protocol": "ssh",
+      "transport": "tcp",
+      "sensor_id": "stingar-duke-sensor-01",
+      "honeypot_type": "cowrie",
+      "attack_type": "ssh_bruteforce"
+    }
+  ]
+}
+```
+
+### What central returns
+
+| Field | Description |
+|---|---|
+| `enriched_documents[]` | Elasticsearch-ready documents per event |
+| `batch_summary` | Severity/classification counts |
+| `incident_clusters[]` | Grouped incidents with MITRE ATT&CK context |
+| `prioritized_incidents[]` | Analyst priority queue |
+| `enrichment_stats` | New vs cached enrichment counts |
+
+### How new-IP deduplication works
+
+1. **STINGAR client** persists every source IP it has ever forwarded in `.stingar_seen_ips.json`.
+2. On each batch, the client computes `new_ips = source_ips - seen_ips`.
+3. The client sends the full event batch plus the `new_ips` list.
+4. **Central server** enriches fresh summaries for `new_ips` and reuses its own in-memory cache for repeat IPs.
+5. After a successful response, the STINGAR client marks all batch source IPs as seen.
+
+### Running the distributed stack
+
+**Terminal 1 — start central server:**
+
+```bash
+python -m central.server
+# listens on http://0.0.0.0:8080 by default
+```
+
+**Terminal 2 — submit events from STINGAR client:**
+
+```bash
+export CENTRAL_ENRICHMENT_URL=http://127.0.0.1:8080
+export STINGAR_CLIENT_ID=example-stingar-01
+python -m stingar.client
+```
+
+**Enrich IPs only (no honeypot event context):**
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/enrich/ips \
+  -H 'Content-Type: application/json' \
+  -d '{"client_id":"example-stingar-01","ip_addresses":["203.0.113.42"]}'
+```
+
+### Central API endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Health check |
+| `POST` | `/api/v1/enrich/events` | Full STINGAR batch pipeline |
+| `POST` | `/api/v1/enrich/ip` | Single IP intelligence summary |
+| `POST` | `/api/v1/enrich/ips` | Batch IP summaries |
+| `GET` | `/api/v1/scanners?client_id=` | List merged scanner definitions |
+| `GET` | `/api/v1/scanners/table?client_id=` | Flat CIDR table (one row per range) |
+| `POST` | `/api/v1/scanners` | Add a client-owned scanner |
+| `DELETE` | `/api/v1/scanners/{scanner_id}?client_id=` | Remove a client-owned scanner |
+
+### Known scanner CIDR tables
+
+Global defaults live in `config/scanners/default_scanners.json`:
+
+| Scanner ID | Organization | Range type |
+|---|---|---|
+| `cortex-xpanse` | Palo Alto Cortex Xpanse | Multiple IPv4 CIDR blocks |
+| `censys` | Censys | Multiple IPv4 CIDR blocks |
+| `shodan` | Shodan | IPv4 CIDR blocks |
+| `shadowserver` | The Shadowserver Foundation | IPv4 + IPv6 CIDR blocks |
+
+Each client can maintain its own table at `config/clients/{client_id}_scanners.json`. Client entries merge on top of defaults; a matching `id` overrides the global entry.
+
+**View the flat range table:**
+
+```bash
+curl 'http://127.0.0.1:8080/api/v1/scanners/table?client_id=example-stingar-01'
+```
+
+**Add a client scanner via API:**
+
+```bash
+curl -X POST http://127.0.0.1:8080/api/v1/scanners \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "client_id": "example-stingar-01",
+    "scanner": {
+      "id": "campus-scanner",
+      "company": "Campus Approved Scanner",
+      "category": "internal_vulnerability_scanner",
+      "ranges": ["10.200.50.0/24"],
+      "notes": "Weekly approved internal scan range"
+    }
+  }'
+```
+
+Or edit `config/clients/example-stingar-01_scanners.json` directly.
 
 ---
 
@@ -146,10 +321,22 @@ STINGAR events[]
 
 ```
 threat-intel-agent/
-├── main.py              # Entire application (~2,500 lines)
-├── .env                 # API keys (not committed; see .gitignore)
-├── .gitignore
-├── threat_report.json   # Example structured report output (gitignored)
+├── main.py                         # Core enrichment engine + Claude agent loop
+├── threat_intel/
+│   ├── scanners.py                 # ScannerRegistry (global + client CIDR tables)
+│   ├── pipeline.py                 # Central enrichment orchestration
+│   └── protocols.py                # Client <-> central HTTP payload schemas
+├── central/
+│   └── server.py                   # FastAPI central enrichment server
+├── stingar/
+│   └── client.py                   # STINGAR-side client + seen-IP store
+├── config/
+│   ├── scanners/
+│   │   └── default_scanners.json   # Global scanner CIDR table
+│   └── clients/
+│       └── {client_id}_scanners.json  # Per-client scanner overrides
+├── requirements.txt
+├── .env                            # API keys (not committed)
 └── README.md
 ```
 
@@ -192,6 +379,12 @@ ABUSEIPDB_API_KEY=your_abuseipdb_api_key_here
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes (for agent mode) | Authenticates Claude API calls in `run_threat_intel_agent()` |
 | `ABUSEIPDB_API_KEY` | No | Live IP reputation via AbuseIPDB; falls back to mock data if missing |
+| `CENTRAL_ENRICHMENT_URL` | STINGAR client | Base URL of central server (e.g. `http://10.0.0.5:8080`) |
+| `STINGAR_CLIENT_ID` | STINGAR client | Client ID used for scanner table merge and cache partitioning |
+| `STINGAR_SENSOR_ID` | STINGAR client | Default sensor ID attached to submitted batches |
+| `STINGAR_SEEN_IP_STORE` | STINGAR client | Path to local seen-IP JSON store (default: `.stingar_seen_ips.json`) |
+| `CENTRAL_HOST` / `CENTRAL_PORT` | Central server | Bind address for FastAPI (default: `0.0.0.0:8080`) |
+| `CENTRAL_API_KEY` | Optional | Bearer token for central API auth (future hook) |
 
 Additional constants in `main.py`:
 
@@ -577,10 +770,46 @@ The batch pipeline transforms raw honeypot event streams into prioritized analys
 **`build_incident_clusters(enriched_documents)`** groups events by `source_ip + campaign_name`. Each cluster includes:
 
 - Incident ID
-- Source IP, campaign, threat actor
+- Source IP, campaign, campaign type, threat actor
 - Severity and recommended action
 - Recurrence data from `detect_recurring_attacker()`
-- Event count, attack types, destination ports
+- Event count, attack types, destination ports, malware families
+- **`mitre_attack`** — MITRE ATT&CK context derived from the cluster:
+  - `techniques` — deduplicated technique IDs, names, and tactics
+  - `tactics` — unique ATT&CK tactics across all mapped techniques
+  - `detection_suggestions` — merged analyst detection guidance
+  - `mapping_sources` — which signals drove the mapping (attack type, campaign type, malware family)
+
+MITRE mapping is built by `build_cluster_mitre_attack()`, which combines:
+
+| Signal | Example | MITRE Query / Mapping |
+|---|---|---|
+| Honeypot attack type | `ssh_bruteforce` | T1110.001 Password Guessing, T1021.004 SSH |
+| Honeypot attack type | `service_probe` | T1046 Network Service Discovery, T1595.002 Vulnerability Scanning |
+| Campaign type | `botnet_c2` | Command and Control techniques |
+| Malware family | `Emotet` | Command and Control techniques |
+| Malware family | `Trickbot` | Credential theft techniques |
+
+Example cluster MITRE block:
+
+```json
+"mitre_attack": {
+  "techniques": [
+    {"id": "T1110.001", "name": "Password Guessing", "tactic": "Credential Access"},
+    {"id": "T1071.001", "name": "Web Protocols", "tactic": "Command and Control"}
+  ],
+  "tactics": ["Command and Control", "Credential Access", "Lateral Movement"],
+  "detection_suggestions": [
+    "Alert on repeated failed SSH authentication attempts from a single source IP",
+    "Monitor for unusual outbound HTTPS to non-standard ports"
+  ],
+  "mapping_sources": [
+    "attack_type:ssh_bruteforce",
+    "campaign_type:botnet_c2",
+    "malware_family:Emotet"
+  ]
+}
+```
 
 #### Step 4: Prioritize
 

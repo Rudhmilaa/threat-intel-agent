@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "description": "Global known internet scanner CIDR table. Ranges are checked with longest-prefix matching.",
+  "scanners": [
+    {
+      "id": "cortex-xpanse",
+      "company": "Palo Alto Networks Cortex Xpanse",
+      "category": "attack_surface_scanner",
+      "classification": "known_scanner",
+      "default_severity": "LOW",
+      "source": "default",
+      "ranges": [
+        "35.203.210.0/23",
+        "144.86.173.0/24",
+        "147.185.132.0/23",
+        "162.216.149.0/24",
+        "162.216.150.0/24",
+        "172.105.147.0/24",
+        "198.235.24.0/24",
+        "205.210.31.0/24",
+        "216.25.88.0/21"
+      ],
+      "notes": "Published Cortex Xpanse scanner ranges. Usually benign scanning; monitor if paired with exploit attempts."
+    },
+    {
+      "id": "censys",
+      "company": "Censys",
+      "category": "internet_research_scanner",
+      "classification": "known_scanner",
+      "default_severity": "LOW",
+      "source": "default",
+      "ranges": [
+        "162.142.125.0/24",
+        "167.94.138.0/24",
+        "167.94.145.0/24",
+        "167.94.146.0/24",
+        "167.248.133.0/24",
+        "199.45.154.0/24",
+        "199.45.155.0/24",
+        "206.168.34.0/24",
+        "206.168.35.0/24"
+      ],
+      "notes": "Censys internet-wide measurement and attack surface visibility scans."
+    },
+    {
+      "id": "shodan",
+      "company": "Shodan",
+      "category": "internet_search_scanner",
+      "classification": "known_scanner",
+      "default_severity": "LOW",
+      "source": "default",
+      "ranges": [
+        "207.90.244.0/24"
+      ],
+      "notes": "Shodan crawls internet-connected services. Treat as scanner traffic unless paired with authentication failures or exploits."
+    },
+    {
+      "id": "shadowserver",
+      "company": "The Shadowserver Foundation",
+      "category": "internet_research_scanner",
+      "classification": "known_scanner",
+      "default_severity": "LOW",
+      "source": "default",
+      "ranges": [
+        "64.62.128.0/21",
+        "64.62.156.0/25",
+        "64.62.156.160/28",
+        "64.62.156.192/27",
+        "74.82.40.0/21",
+        "184.105.247.0/24",
+        "216.218.206.0/23",
+        "2001:470:1:fb5::/64",
+        "2001:470:2cc:1::/64"
+      ],
+      "notes": "Shadowserver non-intrusive internet measurement scans. Infrastructure evolves; update ranges periodically from shadowserver.org or your subscription."
+    }
+  ]
+}
