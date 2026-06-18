@@ -1,0 +1,149 @@
+vendor,scanner_type,cidr,source_url,last_verified,confidence
+The Shadowserver Foundation,internet_measurement,64.62.128.0/21,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.156.0/25,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.156.160/28,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.156.192/27,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,74.82.40.0/21,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,184.105.247.0/24,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,216.218.206.0/23,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+Censys,internet_measurement,66.132.159.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.148.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.153.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.224.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.186.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.195.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,66.132.172.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,162.142.125.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,167.94.138.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,167.94.145.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,167.94.146.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,167.248.133.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,199.45.154.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,199.45.155.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,206.168.34.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,206.168.35.0/24,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,2602:80d:1000:b0cc:e::/80,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,2620:96:e000:b0cc:e::/80,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,2602:80d:1003::/112,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Censys,internet_measurement,2602:80d:1004::/112,https://docs.censys.com/docs/opt-out-of-data-collection,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,35.203.210.0/23,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,144.86.173.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,147.185.132.0/23,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,162.216.149.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,162.216.150.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,172.105.147.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,198.235.24.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,205.210.31.0/24,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,216.25.88.0/21,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,2604:a940:300:5b6::/64,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,2604:a940:301:225::/64,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+Palo Alto Networks Cortex Xpanse,attack_surface_scanning,2604:a940:302:118::/64,https://docs-cortex.paloaltonetworks.com/r/Cortex-XPANSE/2/Cortex-Xpanse-Expander-User-Guide/Scanning-activity,2026-06,high
+ONYPHE,exposure_scanning,51.81.26.64/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,51.81.253.64/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,51.81.228.240/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,147.135.58.160/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,51.81.14.224/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,51.81.218.64/28,https://www.onyphe.io/,2026-06,high
+ONYPHE,exposure_scanning,147.135.26.176/28,https://www.onyphe.io/,2026-06,high
+LeakIX,exposure_scanning,23.239.4.252/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,23.239.21.238/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,46.101.1.225/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,46.101.111.185/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.23.159.209/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.23.218.208/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.225.75.246/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.226.65.160/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.226.78.121/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.227.32.66/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,64.227.70.2/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,68.183.9.16/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,68.183.180.73/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,96.126.110.54/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,104.237.130.38/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,128.199.182.55/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,128.199.182.77/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,128.199.182.152/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,134.122.28.88/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,134.209.25.199/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,138.68.82.23/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,138.68.86.32/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,138.68.144.227/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,138.197.191.87/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.59.132.8/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.59.136.184/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.59.143.102/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.59.231.238/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.162.96.14/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.162.96.81/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.162.141.82/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,139.162.155.225/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,142.93.0.66/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,142.93.129.190/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,142.93.143.8/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,143.110.213.72/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,143.110.217.244/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,143.244.168.161/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,146.190.63.48/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,146.190.63.248/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,146.190.103.103/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,146.190.242.161/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,147.182.149.75/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,147.182.200.94/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,157.230.19.140/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,157.245.36.108/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,157.245.105.107/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,157.245.113.227/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,157.245.204.205/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.65.18.197/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.65.144.72/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.89.12.166/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.89.127.165/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.89.174.87/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.203.96.42/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,159.223.132.86/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,164.90.208.56/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,164.90.228.79/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,164.92.107.174/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,164.92.244.132/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,165.22.34.189/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,165.22.235.3/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,165.227.39.235/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,165.227.84.14/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,165.227.173.41/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.71.81.114/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.71.175.236/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.99.181.249/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.99.182.39/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.99.210.137/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.172.158.128/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,167.172.232.142/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.16.34/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.16.40/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.16.105/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.16.117/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.16.131/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,172.105.158.219/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,178.128.207.138/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,188.166.108.93/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,192.46.211.230/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.81.12.187/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.81.24.74/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.81.24.227/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.189.2.13/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.189.19.19/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.189.95.232/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.189.225.181/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,206.189.233.36/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,207.154.197.113/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,207.154.212.47/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,209.38.208.202/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,209.38.248.17/32,https://scan.leakix.net/json,2026-06,medium
+LeakIX,exposure_scanning,209.97.180.8/32,https://scan.leakix.net/json,2026-06,medium
+BinaryEdge,internet_scanning,,https://api.binaryedge.io/v1/minions,2026-06,dynamic
+Rapid7 Project Sonar,internet_measurement,,https://www.rapid7.com/research/project-sonar/,2026-06,pending
+Shodan,internet_scanning,,https://book.shodan.io/behind-the-scenes/crawler-algorithm/,2026-06,pending
+Google Security Research,cloud_security_research,,https://www.gstatic.com/ipranges/goog.json,2026-06,pending
+Microsoft Defender Research,cloud_security_research,,https://www.microsoft.com/en-us/download/details.aspx?id=56519,2026-06,pending
+AWS Security Research,cloud_security_research,,https://ip-ranges.amazonaws.com/ip-ranges.json,2026-06,pending
+Akamai Research,cloud_security_research,,https://techdocs.akamai.com/property-manager/pdfs/akamai_ipv4_cidrs.txt,2026-06,pending
+Cloudflare Research,cloud_security_research,,https://www.cloudflare.com/ips-v4/,2026-06,pending

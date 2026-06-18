@@ -1,0 +1,41 @@
+name: Refresh scanner inventory
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Refresh known scanner inventory
+        run: python -m threat_intel.scanner_inventory_maintenance
+
+      - name: Commit inventory updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add config/scanners/known_scanner_inventory.csv config/scanners/feeds/
+          if git diff --staged --quiet; then
+            echo "Scanner inventory unchanged."
+          else
+            git commit -m "$(cat <<'EOF'
+Refresh known scanner inventory from official vendor feeds.
+
+EOF
+)"
+            git push
+          fi

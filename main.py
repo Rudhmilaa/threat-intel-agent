@@ -7,7 +7,13 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime, timezone
 
-from threat_intel.scanners import ScannerRegistry, classify_known_scanner, configure_scanners
+from threat_intel.scanners import (
+    ScannerRegistry,
+    classify_known_scanner,
+    configure_scanners,
+    list_scanner_inventory,
+)
+from threat_intel.scanner_inventory_maintenance import refresh_scanner_inventory
 
 STANDARD_IOC_TYPES = {
     "ip": "ip_address",
@@ -144,7 +150,7 @@ tools = [
 
     {
         "name": "classify_known_scanner",
-        "description": "Determine whether an IP address belongs to a known internet scanner or security research organization such as Censys, Shodan, Palo Alto Cortex Xpanse, or other benign scanning infrastructure.",
+        "description": "Determine whether an IP address belongs to a known internet scanner or security research organization. Uses known_scanner_inventory.csv with vendor CIDRs, source URLs, last_verified dates, and confidence levels. Only high/medium-confidence documented ranges are used for automatic classification.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -154,6 +160,29 @@ tools = [
                 }
             },
             "required": ["ip_address"],
+        },
+    },
+
+    {
+        "name": "list_scanner_inventory",
+        "description": "Return the known scanner inventory spreadsheet (vendor, scanner_type, cidr, source_url, last_verified, confidence) plus coverage stats. Use this to review which scanners have documented CIDRs versus pending or dynamic sources.",
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+
+    {
+        "name": "refresh_scanner_inventory",
+        "description": "Refresh known_scanner_inventory.csv from official vendor feeds (Censys, Cortex Xpanse, ONYPHE, LeakIX, BinaryEdge), verify pending vendor documentation URLs, update last_verified stamps, and reload the active scanner registry.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dry_run": {
+                    "type": "boolean",
+                    "description": "If true, fetch feeds and return a change report without writing the CSV.",
+                }
+            },
         },
     },
 
@@ -1090,6 +1119,12 @@ def convert_to_elastic_document(
         },
     }
 
+
+def attach_taxonomy_to_clusters(clusters: list) -> list:
+    from threat_intel.taxonomy import attach_taxonomy_to_clusters as _attach
+
+    return _attach(clusters)
+
 # ── Actual Threat Report ────────────────────────────────────────────────
 
 def generate_threat_report(ioc: str, data: dict) -> str:
@@ -1314,6 +1349,8 @@ Rules:
 - Do not invent indicators.
 - Only investigate indicators explicitly provided by the user or returned by tools.
 - Distinguish malicious infrastructure from known benign scanner traffic.
+- Scanner attribution comes from known_scanner_inventory.csv. Use list_scanner_inventory when asked about scanner coverage or maintenance.
+- Use refresh_scanner_inventory to sync official vendor feeds before reporting on scanner inventory freshness.
 - Treat Tor/VPN/proxy traffic as context, not automatic proof of maliciousness.
 - Produce concise analyst-ready reports with severity, confidence, evidence, and recommended actions.
 - Keep the final report under 600 words.
@@ -1333,6 +1370,11 @@ def process_tool_call(tool_name: str, tool_input: dict) -> str:
         "get_mitre_techniques": lambda inp: get_mitre_techniques(inp["query"]),
         "find_related_iocs": lambda inp: find_related_iocs(inp["ioc"], inp["ioc_type"]),
         "classify_known_scanner": lambda inp: classify_known_scanner(inp["ip_address"]),
+        "list_scanner_inventory": lambda inp: list_scanner_inventory(),
+        "refresh_scanner_inventory": lambda inp: refresh_scanner_inventory(
+            write_changes=not inp.get("dry_run", False),
+            reload_registry=not inp.get("dry_run", False),
+        ).to_dict(),
         "lookup_ioc_timeline": lambda inp: lookup_ioc_timeline(inp["ioc"], inp["ioc_type"]),
         "analyze_ip_version": lambda inp: analyze_ip_version(inp["ip_address"]),
         "classify_greynoise": lambda inp: classify_greynoise(inp["ip_address"]),
@@ -1593,9 +1635,9 @@ def find_related_iocs(ioc: str, ioc_type: str) -> dict:
     return related_database[ioc]
 
 # ── STAGE 7: Known Scanner Classification Tool ──────────────────────────────────
-# Scanner CIDR tables live in config/scanners/default_scanners.json with optional
-# per-client overrides in config/clients/{client_id}_scanners.json.
-# classify_known_scanner() is implemented in threat_intel.scanners.ScannerRegistry.
+# Scanner inventory lives in config/scanners/known_scanner_inventory.csv with optional
+# per-client JSON overrides in config/clients/{client_id}_scanners.json.
+# classify_known_scanner() and list_scanner_inventory() are in threat_intel.scanners.
 
 # ── STAGE 8: IOC Timeline Tool ────────────────────────────────────────────────
 # run_mock_agent("203.0.113.42", "ip_address")
@@ -2063,7 +2105,9 @@ def build_incident_clusters(enriched_documents: list) -> list:
 
         results.append(cluster)
 
-    return results
+    from threat_intel.taxonomy import attach_taxonomy_to_clusters
+
+    return attach_taxonomy_to_clusters(results)
 
 # ── Priority Queue ────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "description": "Global known internet scanner CIDR table. Ranges are checked with longest-prefix matching.",
+  "description": "Legacy fallback scanner table. Primary source of truth is config/scanners/known_scanner_inventory.csv.",
   "scanners": [
     {
       "id": "cortex-xpanse",
