@@ -182,14 +182,10 @@ _cache_instance: Optional[IntelligenceCacheBackend] = None
 
 
 def create_cache_backend() -> IntelligenceCacheBackend:
-    backend = os.getenv("CENTRAL_CACHE_BACKEND", "sqlite").lower()
+    """Return the intelligence cache backend (ES primary when STINGAR_STORAGE_BACKEND=elasticsearch)."""
+    from threat_intel.storage import get_intelligence_cache
 
-    if backend == "redis":
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-        return RedisIntelligenceCache(redis_url=redis_url)
-
-    sqlite_path = os.getenv("CENTRAL_CACHE_SQLITE_PATH", str(DEFAULT_SQLITE_PATH))
-    return SQLiteIntelligenceCache(db_path=sqlite_path)
+    return get_intelligence_cache()
 
 
 def get_cache_backend() -> IntelligenceCacheBackend:

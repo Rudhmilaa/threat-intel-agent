@@ -1,0 +1,23 @@
+{
+  "index_patterns": ["intel-summaries"],
+  "priority": 220,
+  "template": {
+    "settings": {
+      "number_of_shards": 1
+    },
+    "mappings": {
+      "_meta": {
+        "owner": "threat-intel-agent",
+        "description": "Per-client IP intelligence summaries — content-addressed upsert cache backing enrichment dedup."
+      },
+      "dynamic": "strict",
+      "properties": {
+        "client_id": { "type": "keyword" },
+        "ip_address": { "type": "ip" },
+        "enriched_at": { "type": "date" },
+        "updated_at": { "type": "date" },
+        "summary": { "type": "object", "enabled": false }
+      }
+    }
+  }
+}

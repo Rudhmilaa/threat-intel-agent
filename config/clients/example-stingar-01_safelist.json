@@ -1,0 +1,18 @@
+{
+  "client_id": "example-stingar-01",
+  "description": "Client-specific safelist entries merged on top of defaults.",
+  "entries": [
+    {
+      "id": "campus-approved-scanner",
+      "provider": "Example University Internal Scanner",
+      "ranges": ["10.200.50.0/24"],
+      "direction": ["inbound", "outbound"],
+      "actions": {
+        "never_block": true,
+        "never_escalate": true,
+        "cap_severity": "LOW"
+      },
+      "notes": "Campus-approved weekly vulnerability scanner."
+    }
+  ]
+}

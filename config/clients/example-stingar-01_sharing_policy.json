@@ -1,0 +1,26 @@
+{
+  "client_id": "example-stingar-01",
+  "deployment_mode": "hybrid",
+  "global_joined": false,
+  "share_events": false,
+  "share_enriched_documents": true,
+  "share_mode": "sanitized",
+  "never_share_fields": [
+    "destination.ip",
+    "event.original",
+    "stingar.sensor_id"
+  ],
+  "never_share_if_tags": [
+    "internal",
+    "student_network",
+    "policy:share_blocked"
+  ],
+  "never_share_classifications": [
+    "confirmed_malicious_infrastructure"
+  ],
+  "never_share_destination_cidrs": [
+    "10.0.0.0/8",
+    "172.16.0.0/12",
+    "192.168.0.0/16"
+  ]
+}

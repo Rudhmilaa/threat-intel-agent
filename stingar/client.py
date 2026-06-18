@@ -1,85 +1,53 @@
-"""STINGAR-side client that tracks seen IPs and forwards new work to central."""
+"""STINGAR-side hybrid client: local enrichment first, optional global sync."""
 
 from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
-from pathlib import Path
 from typing import Optional
 
 import requests
 from dotenv import load_dotenv
 
+from stingar.sync_queue import SyncQueue
+from threat_intel.local_pipeline import enrich_events_locally
+from threat_intel.policy_engine import evaluate_shareability
+from threat_intel.sharing_policy import load_sharing_policy
+from threat_intel.storage import get_intelligence_cache
+
 load_dotenv()
 
 
-class SeenIPStore:
-    """Persistent local store of source IPs already submitted to central."""
-
-    def __init__(self, store_path: Path | str):
-        self.store_path = Path(store_path)
-        self._data = self._load()
-
-    def _load(self) -> dict:
-        if not self.store_path.exists():
-            return {"seen_ips": {}}
-
-        return json.loads(self.store_path.read_text(encoding="utf-8"))
-
-    def _save(self) -> None:
-        self.store_path.parent.mkdir(parents=True, exist_ok=True)
-        self.store_path.write_text(json.dumps(self._data, indent=2) + "\n", encoding="utf-8")
-
-    def has_seen(self, ip_address: str) -> bool:
-        return ip_address in self._data.get("seen_ips", {})
-
-    def mark_seen(self, ip_address: str) -> None:
-        self._data.setdefault("seen_ips", {})[ip_address] = {
-            "first_seen_at": datetime.now(timezone.utc).isoformat(),
-        }
-        self._save()
-
-    def mark_many_seen(self, ip_addresses: list[str]) -> None:
-        for ip_address in ip_addresses:
-            if ip_address:
-                self.mark_seen(ip_address)
-
-    def filter_new_ips(self, ip_addresses: list[str]) -> list[str]:
-        return sorted({ip for ip in ip_addresses if ip and not self.has_seen(ip)})
-
-    def list_seen_ips(self) -> list[str]:
-        return sorted(self._data.get("seen_ips", {}).keys())
-
-
-class StingarEnrichmentClient:
+class HybridEnrichmentClient:
     """
-    Runs on a STINGAR honeypot server.
+    Hybrid STINGAR enrichment client.
 
-    Workflow:
-    1. Accept honeypot events locally
-    2. Determine which source IPs are new
-    3. Send events + new_ips to the central enrichment server
-    4. Persist newly observed IPs locally so repeat traffic does not re-trigger enrichment
+    Always enriches locally first. Optionally syncs sanitized payloads to central
+    when online and allowed by sharing policy.
+
+    IP deduplication uses the intelligence cache (intel-summaries / ES) — not a
+    separate seen-IP JSON file.
     """
 
     def __init__(
         self,
-        central_url: str,
         client_id: str,
+        central_url: Optional[str] = None,
         sensor_id: Optional[str] = None,
-        seen_ip_store_path: Optional[Path | str] = None,
         api_key: Optional[str] = None,
         timeout: int = 30,
+        sync_queue: Optional[SyncQueue] = None,
     ):
-        self.central_url = central_url.rstrip("/")
         self.client_id = client_id
+        self.central_url = (central_url or os.getenv("CENTRAL_ENRICHMENT_URL", "")).rstrip("/")
         self.sensor_id = sensor_id
         self.timeout = timeout
         self.api_key = api_key or os.getenv("CENTRAL_API_KEY")
-
-        default_store = Path(os.getenv("STINGAR_SEEN_IP_STORE", ".stingar_seen_ips.json"))
-        self.seen_store = SeenIPStore(seen_ip_store_path or default_store)
+        self.deployment_mode = os.getenv(
+            "STINGAR_DEPLOYMENT_MODE",
+            load_sharing_policy(client_id).get("deployment_mode", "hybrid"),
+        )
+        self.sync_queue = sync_queue or SyncQueue()
 
     def _headers(self) -> dict:
         headers = {"Content-Type": "application/json"}
@@ -90,62 +58,134 @@ class StingarEnrichmentClient:
     def extract_source_ips(self, events: list[dict]) -> list[str]:
         return sorted({event.get("source_ip") for event in events if event.get("source_ip")})
 
-    def process_events(self, events: list[dict]) -> dict:
-        source_ips = self.extract_source_ips(events)
-        new_ips = self.seen_store.filter_new_ips(source_ips)
+    def filter_new_ips(self, ip_addresses: list[str]) -> list[str]:
+        return get_intelligence_cache().filter_new_ips(self.client_id, ip_addresses)
 
-        payload = {
+    def _build_sync_payload(self, local_result: dict, shareable_docs: list[dict]) -> dict:
+        return {
             "client_id": self.client_id,
             "sensor_id": self.sensor_id,
-            "events": events,
-            "new_ips": new_ips,
+            "enriched_documents": shareable_docs,
+            "batch_summary": local_result.get("batch_summary"),
+            "incident_clusters": local_result.get("incident_clusters"),
+            "prioritized_incidents": local_result.get("prioritized_incidents"),
+            "enrichment_stats": local_result.get("enrichment_stats"),
+            "enrichment_source": "local",
         }
 
-        response = requests.post(
-            f"{self.central_url}/api/v1/enrich/events",
-            json=payload,
-            headers=self._headers(),
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-        result = response.json()
+    def _attempt_sync(self, payload: dict) -> dict:
+        if not self.central_url or self.deployment_mode == "local_only":
+            return {"sync_status": "skipped", "reason": "local_only or no central URL"}
 
-        self.seen_store.mark_many_seen(source_ips)
-        result["local_stats"] = {
+        try:
+            response = requests.post(
+                f"{self.central_url}/api/v1/sync/events",
+                json=payload,
+                headers=self._headers(),
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            body = response.json()
+            return {"sync_status": "synced", "central_response": body}
+        except Exception as error:
+            queue_id = self.sync_queue.enqueue(self.client_id, payload)
+            return {
+                "sync_status": "queued",
+                "reason": str(error),
+                "queue_id": queue_id,
+            }
+
+    def process_events(self, events: list[dict]) -> dict:
+        source_ips = self.extract_source_ips(events)
+        new_ips = self.filter_new_ips(source_ips)
+
+        local_result = enrich_events_locally(
+            events=events,
+            client_id=self.client_id,
+            new_ips=new_ips,
+            auto_detect_new_ips=False,
+        )
+
+        shareable_docs = []
+        blocked_docs = 0
+        for document in local_result.get("enriched_documents", []):
+            decision = evaluate_shareability(document, self.client_id)
+            if decision["allowed"]:
+                shareable_docs.append(decision["sanitized_document"])
+            else:
+                blocked_docs += 1
+
+        sync_result = {"sync_status": "blocked", "blocked_documents": blocked_docs}
+        if shareable_docs and self.deployment_mode != "local_only":
+            payload = self._build_sync_payload(local_result, shareable_docs)
+            sync_result = self._attempt_sync(payload)
+        elif blocked_docs and not shareable_docs:
+            sync_result = {
+                "sync_status": "blocked",
+                "reason": "all documents blocked by sharing policy",
+                "blocked_documents": blocked_docs,
+            }
+
+        local_result["local_stats"] = {
             "source_ips_in_batch": len(source_ips),
-            "new_ips_forwarded": len(new_ips),
+            "new_ips_enriched_locally": len(new_ips),
             "cached_ips_locally": len(source_ips) - len(new_ips),
         }
-        return result
+        local_result["sync"] = sync_result
+        local_result["deployment_mode"] = self.deployment_mode
+
+        es_stats = local_result.get("es_stats") or {}
+        if es_stats.get("failed"):
+            local_result["storage_warnings"] = es_stats.get("errors", [])
+
+        return local_result
 
     def enrich_new_ips_only(self, ip_addresses: list[str]) -> dict:
-        new_ips = self.seen_store.filter_new_ips(ip_addresses)
-        if not new_ips:
+        new_ips = self.filter_new_ips(ip_addresses)
+        events = [
+            {
+                "source_ip": ip,
+                "destination_ip": "0.0.0.0",
+                "destination_port": 0,
+                "attack_type": "ip_lookup",
+            }
+            for ip in new_ips
+        ]
+        if not events:
             return {
                 "client_id": self.client_id,
                 "summaries": {},
                 "local_stats": {
-                    "new_ips_forwarded": 0,
+                    "new_ips_enriched_locally": 0,
                     "cached_ips_locally": len(ip_addresses),
                 },
             }
 
-        response = requests.post(
-            f"{self.central_url}/api/v1/enrich/ips",
-            json={"client_id": self.client_id, "ip_addresses": new_ips},
-            headers=self._headers(),
-            timeout=self.timeout,
-        )
-        response.raise_for_status()
-        result = response.json()
-        self.seen_store.mark_many_seen(new_ips)
-        result["local_stats"] = {
-            "new_ips_forwarded": len(new_ips),
-            "cached_ips_locally": len(ip_addresses) - len(new_ips),
+        result = self.process_events(events)
+        summaries = {}
+        for document in result.get("enriched_documents", []):
+            source_ip = document.get("source", {}).get("ip")
+            if source_ip:
+                summaries[source_ip] = {
+                    "indicator": source_ip,
+                    "severity": document.get("threat", {}),
+                    "investigation": document.get("investigation", {}),
+                }
+
+        return {
+            "client_id": self.client_id,
+            "summaries": summaries,
+            "local_stats": result.get("local_stats"),
+            "sync": result.get("sync"),
         }
-        return result
 
     def get_scanner_table(self) -> dict:
+        if not self.central_url:
+            from threat_intel.scanners import ScannerRegistry
+
+            registry = ScannerRegistry.for_client(self.client_id)
+            return {"client_id": self.client_id, "table": registry.scanner_table()}
+
         response = requests.get(
             f"{self.central_url}/api/v1/scanners/table",
             params={"client_id": self.client_id},
@@ -155,10 +195,16 @@ class StingarEnrichmentClient:
         response.raise_for_status()
         return response.json()
 
-    def add_client_scanner(self, scanner_entry: dict) -> dict:
-        response = requests.post(
-            f"{self.central_url}/api/v1/scanners",
-            json={"client_id": self.client_id, "scanner": scanner_entry},
+    def get_safelist_table(self) -> dict:
+        if not self.central_url:
+            from threat_intel.safelist import SafelistRegistry
+
+            registry = SafelistRegistry.for_client(self.client_id)
+            return {"client_id": self.client_id, "table": registry.table()}
+
+        response = requests.get(
+            f"{self.central_url}/api/v1/safelist/table",
+            params={"client_id": self.client_id},
             headers=self._headers(),
             timeout=self.timeout,
         )
@@ -166,16 +212,20 @@ class StingarEnrichmentClient:
         return response.json()
 
 
+# Backward-compatible alias
+StingarEnrichmentClient = HybridEnrichmentClient
+
+
 def main():
     import argparse
 
-    parser = argparse.ArgumentParser(description="STINGAR enrichment client demo")
+    parser = argparse.ArgumentParser(description="STINGAR hybrid enrichment client demo")
     parser.add_argument("--central-url", default=os.getenv("CENTRAL_ENRICHMENT_URL", "http://127.0.0.1:8080"))
     parser.add_argument("--client-id", default=os.getenv("STINGAR_CLIENT_ID", "example-stingar-01"))
     parser.add_argument("--sensor-id", default=os.getenv("STINGAR_SENSOR_ID", "stingar-demo-sensor-01"))
     args = parser.parse_args()
 
-    client = StingarEnrichmentClient(
+    client = HybridEnrichmentClient(
         central_url=args.central_url,
         client_id=args.client_id,
         sensor_id=args.sensor_id,
@@ -206,10 +256,11 @@ def main():
         },
     ]
 
-    print("Submitting batch to central enrichment server...")
+    print("Running hybrid local-first enrichment...")
     result = client.process_events(sample_events)
     print(json.dumps(result.get("local_stats"), indent=2))
     print(json.dumps(result.get("enrichment_stats"), indent=2))
+    print(json.dumps(result.get("sync"), indent=2))
     print(f"Prioritized incidents: {len(result.get('prioritized_incidents', []))}")
 
 

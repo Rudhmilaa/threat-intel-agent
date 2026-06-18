@@ -8,7 +8,8 @@ from typing import Any, Optional
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, HTTPException, Request
 
-from stingar.client import StingarEnrichmentClient
+from stingar.client import HybridEnrichmentClient
+from threat_intel.storage import elasticsearch_available, get_intelligence_cache, storage_backend_name
 from threat_intel.webhook_events import extract_events
 
 load_dotenv()
@@ -16,22 +17,22 @@ load_dotenv()
 app = FastAPI(
     title="STINGAR Webhook Listener",
     description=(
-        "Receives honeypot events on the STINGAR server and forwards them to the "
-        "central enrichment server with local seen-IP deduplication."
+        "Receives honeypot events on the STINGAR server, enriches locally first, "
+        "and optionally syncs sanitized payloads to central."
     ),
-    version="1.0.0",
+    version="1.1.0",
 )
 
-_client: Optional[StingarEnrichmentClient] = None
+_client: Optional[HybridEnrichmentClient] = None
 
 
-def get_client() -> StingarEnrichmentClient:
+def get_client() -> HybridEnrichmentClient:
     global _client
     if _client is None:
         central_url = os.getenv("CENTRAL_ENRICHMENT_URL", "http://127.0.0.1:8080")
         client_id = os.getenv("STINGAR_CLIENT_ID", "example-stingar-01")
         sensor_id = os.getenv("STINGAR_SENSOR_ID")
-        _client = StingarEnrichmentClient(
+        _client = HybridEnrichmentClient(
             central_url=central_url,
             client_id=client_id,
             sensor_id=sensor_id,
@@ -62,23 +63,23 @@ def require_webhook_secret(request: Request) -> None:
 @app.get("/health")
 def health():
     client = get_client()
-    return {
+    payload = {
         "status": "ok",
         "service": "stingar-webhook-listener",
         "client_id": client.client_id,
-        "central_url": client.central_url,
-        "seen_ip_count": len(client.seen_store.list_seen_ips()),
+        "deployment_mode": client.deployment_mode,
+        "storage_backend": storage_backend_name(),
+        "central_url": client.central_url or None,
+        "intelligence_cache": get_intelligence_cache().stats(),
+        "sync_queue": client.sync_queue.stats(),
     }
+    if storage_backend_name() == "elasticsearch":
+        payload["elasticsearch_reachable"] = elasticsearch_available()
+    return payload
 
 
 @app.post("/webhook/stingar", dependencies=[Depends(require_webhook_secret)])
 async def receive_stingar_webhook(request: Request):
-    """
-    Local STINGAR webhook receiver.
-
-    Point Cowrie/STINGAR HTTP output here. This listener normalizes the payload,
-    tracks seen IPs locally, and forwards the batch to central enrichment.
-    """
     payload: dict[str, Any] = await request.json()
     client = get_client()
     events = extract_events(payload, default_sensor_id=client.sensor_id)
@@ -89,13 +90,18 @@ async def receive_stingar_webhook(request: Request):
     try:
         result = client.process_events(events)
     except Exception as error:
-        raise HTTPException(status_code=502, detail=f"Central enrichment failed: {error}") from error
+        raise HTTPException(status_code=502, detail=f"Local enrichment failed: {error}") from error
 
     return {
         "status": "accepted",
+        "enrichment_source": result.get("enrichment_source", "local"),
+        "storage_backend": result.get("storage_backend"),
         "received_events": len(events),
         "local_stats": result.get("local_stats"),
         "enrichment_stats": result.get("enrichment_stats"),
+        "es_stats": result.get("es_stats"),
+        "storage_warnings": result.get("storage_warnings"),
+        "sync": result.get("sync"),
         "prioritized_incidents": len(result.get("prioritized_incidents", [])),
     }
 

@@ -1,0 +1,139 @@
+{
+  "index_patterns": ["stingar-*"],
+  "priority": 210,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "index.lifecycle.name": "stingar-policy"
+    },
+    "mappings": {
+      "_meta": {
+        "owner": "threat-intel-agent",
+        "description": "Enriched STINGAR honeypot sessions/events — primary analyst store (Attack Analysis query target)."
+      },
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "src_ip": { "type": "ip" },
+        "session_id": { "type": "keyword" },
+        "effective_severity": { "type": "keyword" },
+        "effective_signals": { "type": "keyword" },
+        "source": {
+          "properties": {
+            "ip": { "type": "ip" },
+            "port": { "type": "integer" },
+            "geo": {
+              "properties": {
+                "country_code": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "destination": {
+          "properties": {
+            "ip": { "type": "ip" },
+            "port": { "type": "integer" }
+          }
+        },
+        "network": {
+          "properties": {
+            "protocol": { "type": "keyword" },
+            "transport": { "type": "keyword" }
+          }
+        },
+        "stingar": {
+          "properties": {
+            "sensor_id": { "type": "keyword" },
+            "honeypot_type": { "type": "keyword" },
+            "attack_type": { "type": "keyword" },
+            "session_id": { "type": "keyword" }
+          }
+        },
+        "threat": {
+          "properties": {
+            "severity": { "type": "keyword" },
+            "threat_score": { "type": "float" },
+            "confidence_score": { "type": "float" },
+            "risk_factors": { "type": "keyword" },
+            "indicator": {
+              "properties": {
+                "ip": { "type": "ip" },
+                "type": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "investigation": {
+          "properties": {
+            "classification": { "type": "keyword" },
+            "category": { "type": "keyword" },
+            "priority": { "type": "keyword" },
+            "reasons": { "type": "keyword" }
+          }
+        },
+        "campaign": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "type": { "type": "keyword" },
+            "malware_families": { "type": "keyword" }
+          }
+        },
+        "threat_actor": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "confidence": { "type": "float" },
+            "motivation": { "type": "keyword" }
+          }
+        },
+        "taxonomy": {
+          "properties": {
+            "tags": { "type": "keyword" },
+            "identity": { "type": "keyword" },
+            "intensity": { "type": "keyword" },
+            "response": { "type": "keyword" }
+          }
+        },
+        "policy": { "type": "object", "enabled": false },
+        "hp_data": {
+          "properties": {
+            "enrichment": {
+              "properties": {
+                "version": { "type": "keyword" },
+                "effective_severity": { "type": "keyword" },
+                "effective_signals": { "type": "keyword" },
+                "c2": {
+                  "properties": {
+                    "value": { "type": "keyword" },
+                    "stage": { "type": "keyword" }
+                  }
+                },
+                "payloads": {
+                  "properties": {
+                    "sha256": { "type": "keyword" },
+                    "family": { "type": "keyword" }
+                  }
+                },
+                "playbook": {
+                  "properties": {
+                    "name": { "type": "keyword" },
+                    "exact_key": { "type": "keyword" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "elastic_metadata": {
+          "properties": {
+            "client_id": { "type": "keyword" },
+            "pipeline": { "type": "keyword" },
+            "cache_status": { "type": "keyword" },
+            "document_type": { "type": "keyword" },
+            "version": { "type": "keyword" }
+          }
+        },
+        "event": { "type": "object", "enabled": false }
+      }
+    }
+  }
+}
