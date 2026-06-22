@@ -9,6 +9,7 @@ Built for security operations workflows — especially **STINGAR honeypot event 
 ## Table of Contents
 
 - [Overview](#overview)
+- [Documentation](#documentation)
 - [Distributed Architecture](#distributed-architecture)
 - [Architecture](#architecture)
 - [Features](#features)
@@ -37,361 +38,77 @@ Built for security operations workflows — especially **STINGAR honeypot event 
 This project implements a full threat intelligence enrichment stack across three deployment roles:
 
 1. **Central enrichment server** (`central/server.py`) — receives honeypot events and new IPs from remote STINGAR nodes, runs enrichment, clustering, and prioritization.
-2. **STINGAR client** (`stingar/client.py`) — runs on each honeypot server, tracks seen IPs locally, and forwards only new source IPs to central.
+2. **STINGAR client** (`stingar/client.py`) — runs on each honeypot server, enriches locally, and optionally syncs sanitized results to central.
 3. **Core library** (`main.py` + `threat_intel/`) — shared enrichment engines, scanner tables, MITRE mapping, and Claude agent loop.
 
 The design separates **severity scoring** (how dangerous is this?) from **investigation classification** (what kind of activity is this?). That distinction matters in practice: a Palo Alto Cortex Xpanse or Shadowserver scanner may have thousands of AbuseIPDB reports but should be classified as benign scanner noise, not escalated as C2.
 
 ---
 
+## Documentation
+
+Full technical docs live in [`docs/`](docs/README.md):
+
+| Doc | Topic |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, data flows, trust boundaries |
+| [ENRICHMENT.md](docs/ENRICHMENT.md) | Pipeline, severity vs investigation, scanner Tier-0 |
+| [DATA-MODEL.md](docs/DATA-MODEL.md) | ES indices, document schema, query language |
+| [POLICY-AND-SHARING.md](docs/POLICY-AND-SHARING.md) | Safelist, sharing policy, sync rules |
+| [DEPLOYMENT.md](docs/DEPLOYMENT.md) | How to run central, webhook listener, sync worker |
+| [API-REFERENCE.md](docs/API-REFERENCE.md) | REST endpoint catalog |
+| [DECISIONS.md](docs/DECISIONS.md) | Architecture decision log |
+| [ROADMAP.md](docs/ROADMAP.md) | Open work and known gaps |
+
+---
+
 ## Distributed Architecture
+
+Default mode is **hybrid local-first**: STINGAR enriches on-box always; sanitized documents sync to central when online and policy allows.
 
 ```mermaid
 flowchart LR
     subgraph StingarNode["STINGAR Honeypot Server"]
         HP[Honeypot Events]
-        SEEN[Seen IP Store\n.stingar_seen_ips.json]
-        SC[stingar/client.py]
+        WH[webhook_listener]
+        HEC[HybridEnrichmentClient]
     end
 
     subgraph Central["Central Enrichment Server"]
-        API[central/server.py\nFastAPI]
-        CACHE[Central IP Cache]
-        ENR[threat_intel/pipeline.py]
-        SCAN[Scanner Registry\nCIDR tables]
+        API[central/server.py]
+        ES[(Elasticsearch)]
     end
 
-    subgraph Output
-        ES[Elasticsearch Documents]
-        CLU[Incident Clusters + MITRE]
-    end
-
-    HP --> SC
-    SC --> SEEN
-    SC -->|"POST /api/v1/enrich/events\nevents + new_ips"| API
-    API --> ENR
-    ENR --> SCAN
-    ENR --> CACHE
-    ENR --> ES
-    ENR --> CLU
-    API -->|"enriched_documents,\nprioritized_incidents"| SC
+    HP --> WH --> HEC
+    HEC -->|"local enrich + ES write"| HEC
+    HEC -->|"POST /api/v1/sync/events"| API --> ES
 ```
-
-### What the STINGAR client sends
-
-| Field | Required | Description |
-|---|---|---|
-| `client_id` | Yes | Unique deployment ID (e.g. `duke-stingar-01`) |
-| `sensor_id` | No | STINGAR sensor name |
-| `events[]` | Yes | Full honeypot event batch |
-| `new_ips[]` | Yes | Source IPs seen for the first time on this node |
-
-Each honeypot event should include at minimum:
-
-| Field | Example | Purpose |
-|---|---|---|
-| `source_ip` | `203.0.113.42` | Attacker IP to enrich |
-| `destination_ip` | `10.0.0.25` | Honeypot target |
-| `destination_port` | `22` | Service targeted |
-| `attack_type` | `ssh_bruteforce` | Normalized attack label |
-| `protocol` | `ssh` | Application protocol |
-| `transport` | `tcp` | Transport layer |
-| `sensor_id` | `stingar-duke-sensor-01` | Originating sensor |
-| `honeypot_type` | `cowrie` | Honeypot implementation |
-
-Example request:
-
-```json
-{
-  "client_id": "example-stingar-01",
-  "sensor_id": "stingar-duke-sensor-01",
-  "new_ips": ["203.0.113.42"],
-  "events": [
-    {
-      "source_ip": "203.0.113.42",
-      "source_port": 55231,
-      "destination_ip": "10.0.0.25",
-      "destination_port": 22,
-      "protocol": "ssh",
-      "transport": "tcp",
-      "sensor_id": "stingar-duke-sensor-01",
-      "honeypot_type": "cowrie",
-      "attack_type": "ssh_bruteforce"
-    }
-  ]
-}
-```
-
-### What central returns
-
-| Field | Description |
-|---|---|
-| `enriched_documents[]` | Elasticsearch-ready documents per event |
-| `batch_summary` | Severity/classification counts |
-| `incident_clusters[]` | Grouped incidents with MITRE ATT&CK context |
-| `prioritized_incidents[]` | Analyst priority queue |
-| `enrichment_stats` | New vs cached enrichment counts |
-
-### Hybrid local-first enrichment (default)
-
-Default deployment mode is **hybrid**:
-
-1. **STINGAR always enriches locally first** via [`threat_intel/local_pipeline.py`](threat_intel/local_pipeline.py) and `data/local_cache.db`
-2. Sharing policy decides which sanitized documents may leave the node
-3. If central is reachable and sharing is allowed, payloads sync via `POST /api/v1/sync/events`
-4. If central is down, payloads are queued in `data/sync_queue.db` and drained with `python -m stingar.sync_worker`
-5. **LLM access is global-only** for clients with `global_joined: true`
 
 | `STINGAR_DEPLOYMENT_MODE` | Behavior |
 |---|---|
 | `hybrid` (default) | Local enrich always; sync when online + policy allows |
-| `local_only` | Never sync to central; fully air-gapped |
+| `local_only` | Never sync; fully air-gapped |
 | `global_joined` | Hybrid + eligible for central LLM gateway |
 
-### How new-IP deduplication works
+**New-IP dedup** uses the intelligence cache (`intel-summaries` / ES), not a separate seen-IPs file. Only new source IPs trigger fresh enrichment; others hit the cache.
 
-1. **STINGAR client** persists every source IP it has enriched in `.stingar_seen_ips.json`.
-2. On each batch, the client computes `new_ips = source_ips - seen_ips`.
-3. **Local pipeline** enriches only new IPs (others hit `data/local_cache.db`).
-4. Sanitized documents may sync to central if sharing policy allows.
-5. **Central server** merges received summaries into its own persistent cache without re-enriching.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for topologies, trust boundaries, and module map. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for start commands and env vars. See [docs/API-REFERENCE.md](docs/API-REFERENCE.md) for the full endpoint catalog.
 
-### Persistent central cache
-
-Central stores intelligence summaries in a persistent backend so enrichment survives restarts.
-
-| Setting | Default | Description |
-|---|---|---|
-| `CENTRAL_CACHE_BACKEND` | `sqlite` | `sqlite` or `redis` |
-| `CENTRAL_CACHE_SQLITE_PATH` | `data/central_cache.db` | SQLite database path |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL when backend is `redis` |
-
-Check cache stats:
+**Quick start:**
 
 ```bash
-curl http://127.0.0.1:8080/health
-curl -H "Authorization: Bearer $CENTRAL_API_KEY" http://127.0.0.1:8080/api/v1/cache/stats
-```
-
-### API authentication
-
-Protected endpoints require a Bearer token when keys are configured.
-
-| Setting | Description |
-|---|---|
-| `CENTRAL_API_KEY` | Master key accepted by all clients |
-| `CENTRAL_CLIENT_API_KEYS` | JSON map of `{client_id: api_key}` |
-| `config/clients/api_keys.json` | File-based per-client keys (copy from `api_keys.example.json`) |
-
-If no keys are configured, auth is disabled for local development.
-
-Example authenticated request:
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/enrich/events \
-  -H "Authorization: Bearer $CENTRAL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"client_id":"example-stingar-01","events":[...],"new_ips":["203.0.113.42"]}'
-```
-
-### Webhook ingestion
-
-Two webhook options are supported:
-
-**Option A — STINGAR pushes directly to central**
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/webhooks/stingar/example-stingar-01 \
-  -H "Authorization: Bearer $CENTRAL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [
-      {
-        "source_ip": "203.0.113.42",
-        "destination_ip": "10.0.0.25",
-        "destination_port": 22,
-        "attack_type": "ssh_bruteforce",
-        "protocol": "ssh",
-        "honeypot_type": "cowrie"
-      }
-    ]
-  }'
-```
-
-Central auto-detects new IPs from its persistent cache — no `new_ips` field required.
-
-**Option B — Local listener on the STINGAR server**
-
-Run a lightweight receiver that normalizes honeypot payloads and forwards to central:
-
-```bash
-export CENTRAL_ENRICHMENT_URL=http://central-host:8080
-export STINGAR_CLIENT_ID=example-stingar-01
-export CENTRAL_API_KEY=your-key
-export STINGAR_WEBHOOK_SECRET=optional-local-secret
-
-python -m stingar.webhook_listener
-# listens on http://0.0.0.0:8090
-```
-
-Point Cowrie/STINGAR HTTP output to:
-
-```bash
-POST http://stingar-host:8090/webhook/stingar
-Header: X-Webhook-Secret: optional-local-secret
-```
-
-The local listener uses `HybridEnrichmentClient` — enrichment works even when central is unreachable.
-
-### Safelist vs scanner tables
-
-| Table | Question it answers | Config |
-|---|---|---|
-| Scanner registry | Who is this IP? | `config/scanners/default_scanners.json` |
-| Safelist | Should we never block/escalate this range? | `config/safelist/default_safelist.json` |
-
-Client safelist overrides: `config/clients/{client_id}_safelist.json`
-
-```bash
-curl -H "Authorization: Bearer $CENTRAL_API_KEY" \
-  'http://127.0.0.1:8080/api/v1/safelist/table?client_id=example-stingar-01'
-```
-
-### Sharing / privacy policy
-
-Per-client policy file: `config/clients/{client_id}_sharing_policy.json`
-
-Controls:
-- whether events/documents may leave the node
-- which fields and destination CIDRs are redacted
-- which classifications are never shared globally
-- whether the client may use the central LLM gateway (`global_joined`)
-
-```bash
-curl -H "Authorization: Bearer $CENTRAL_API_KEY" \
-  http://127.0.0.1:8080/api/v1/clients/example-stingar-01/policy
-```
-
-### Structured taxonomy tags
-
-Incident clusters include a `taxonomy` block with structured tags:
-
-| Dimension | Examples |
-|---|---|
-| `identity` | `known_scanner.cortex-xpanse`, `unknown_external` |
-| `intent` | `service_probe`, `credential_attack` |
-| `intensity` | `low`, `moderate`, `excessive`, `persistent_recurring` |
-| `policy` | `safelisted`, `never_block`, `share_blocked` |
-| `response` | `suppress`, `monitor`, `rate_limit` |
-
-Known scanners that probe excessively get `known_scanner_excessive_probe` classification.
-
-### Global-only LLM gateway
-
-LLM investigations are only available through central for joined clients:
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/llm/investigate \
-  -H "Authorization: Bearer $CENTRAL_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"client_id":"example-stingar-01","ioc":"203.0.113.42","ioc_type":"ip_address"}'
-```
-
-Requires `global_joined: true` in the client sharing policy. Local STINGAR nodes never call the LLM directly.
-
-### Offline sync queue
-
-When central is unreachable, hybrid clients queue sanitized payloads locally:
-
-```bash
-python -m stingar.sync_worker
-```
-
-### Running the distributed stack
-
-**Terminal 1 — start central server:**
-
-```bash
+# Terminal 1 — central
 python -m central.server
-# listens on http://0.0.0.0:8080 by default
-```
 
-**Terminal 2 — submit events from STINGAR client:**
-
-```bash
+# Terminal 2 — STINGAR listener
 export CENTRAL_ENRICHMENT_URL=http://127.0.0.1:8080
 export STINGAR_CLIENT_ID=example-stingar-01
-python -m stingar.client
+python -m stingar.webhook_listener
 ```
 
-**Enrich IPs only (no honeypot event context):**
+---
 
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/enrich/ips \
-  -H 'Content-Type: application/json' \
-  -d '{"client_id":"example-stingar-01","ip_addresses":["203.0.113.42"]}'
-```
-
-### Central API endpoints
-
-| Method | Path | Auth | Purpose |
-|---|---|---|---|
-| `GET` | `/health` | No | Health check + cache stats |
-| `GET` | `/api/v1/cache/stats` | Yes | Cache backend statistics |
-| `POST` | `/api/v1/enrich/events` | Yes | Full STINGAR batch pipeline |
-| `POST` | `/api/v1/enrich/ip` | Yes | Single IP intelligence summary |
-| `POST` | `/api/v1/enrich/ips` | Yes | Batch IP summaries |
-| `POST` | `/api/v1/webhooks/stingar` | Yes | STINGAR push webhook (client_id in body) |
-| `POST` | `/api/v1/webhooks/stingar/{client_id}` | Yes | STINGAR push webhook (client_id in path) |
-| `POST` | `/api/v1/sync/events` | Yes | Receive sanitized local enrichment from hybrid nodes |
-| `POST` | `/api/v1/llm/investigate` | Yes | Global LLM investigation (joined clients only) |
-| `GET` | `/api/v1/safelist/table?client_id=` | Yes | Flat safelist CIDR table |
-| `POST` | `/api/v1/safelist` | Yes | Add client safelist entry |
-| `DELETE` | `/api/v1/safelist/{entry_id}?client_id=` | Yes | Remove client safelist entry |
-| `GET` | `/api/v1/clients/{client_id}/policy` | Yes | Client deployment + sharing + safelist summary |
-| `PUT` | `/api/v1/clients/{client_id}/policy` | Yes | Update client sharing/deployment policy |
-| `GET` | `/api/v1/scanners?client_id=` | Yes | List merged scanner definitions |
-| `GET` | `/api/v1/scanners/table?client_id=` | Yes | Flat CIDR table (one row per range) |
-| `POST` | `/api/v1/scanners` | Yes | Add a client-owned scanner |
-| `DELETE` | `/api/v1/scanners/{scanner_id}?client_id=` | Yes | Remove a client-owned scanner |
-
-### Known scanner CIDR tables
-
-Global defaults live in `config/scanners/default_scanners.json`:
-
-| Scanner ID | Organization | Range type |
-|---|---|---|
-| `cortex-xpanse` | Palo Alto Cortex Xpanse | Multiple IPv4 CIDR blocks |
-| `censys` | Censys | Multiple IPv4 CIDR blocks |
-| `shodan` | Shodan | IPv4 CIDR blocks |
-| `shadowserver` | The Shadowserver Foundation | IPv4 + IPv6 CIDR blocks |
-
-Each client can maintain its own table at `config/clients/{client_id}_scanners.json`. Client entries merge on top of defaults; a matching `id` overrides the global entry.
-
-**View the flat range table:**
-
-```bash
-curl 'http://127.0.0.1:8080/api/v1/scanners/table?client_id=example-stingar-01'
-```
-
-**Add a client scanner via API:**
-
-```bash
-curl -X POST http://127.0.0.1:8080/api/v1/scanners \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "client_id": "example-stingar-01",
-    "scanner": {
-      "id": "campus-scanner",
-      "company": "Campus Approved Scanner",
-      "category": "internal_vulnerability_scanner",
-      "ranges": ["10.200.50.0/24"],
-      "notes": "Weekly approved internal scan range"
-    }
-  }'
-```
-
-Or edit `config/clients/example-stingar-01_scanners.json` directly.
+Scanner inventory, safelist, and policy details: [docs/ENRICHMENT.md](docs/ENRICHMENT.md) and [docs/POLICY-AND-SHARING.md](docs/POLICY-AND-SHARING.md).
 
 ---
 
