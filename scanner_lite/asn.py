@@ -58,6 +58,8 @@ def build_asn_batches(enriched_documents: list[dict], batch_date: Optional[str] 
             "event_count": 0,
             "unique_ips": set(),
             "category_counts": defaultdict(int),
+            "frequency_tier_counts": defaultdict(int),
+            "behavior_tag_counts": defaultdict(int),
             "api_calls_total": 0,
             "events": [],
         }
@@ -77,6 +79,14 @@ def build_asn_batches(enriched_documents: list[dict], batch_date: Optional[str] 
         category = doc.get("outcome_category", "unknown")
         batch["category_counts"][category] += 1
         batch["api_calls_total"] += len(doc.get("api_call_trace", []))
+
+        metadata = doc.get("investigation_metadata") or {}
+        freq_tier = metadata.get("frequency_tier")
+        if freq_tier:
+            batch["frequency_tier_counts"][freq_tier] += 1
+        for tag in metadata.get("behavior_tags") or []:
+            batch["behavior_tag_counts"][tag] += 1
+
         batch["events"].append(
             {
                 "source_ip": source_ip,
@@ -84,6 +94,9 @@ def build_asn_batches(enriched_documents: list[dict], batch_date: Optional[str] 
                 "scanner_tag": doc.get("scanner_tag"),
                 "destination_port": doc.get("destination_port"),
                 "attack_type": doc.get("attack_type"),
+                "frequency_tier": freq_tier,
+                "behavior_tags": metadata.get("behavior_tags") or [],
+                "priority": metadata.get("priority"),
             }
         )
 
@@ -91,6 +104,8 @@ def build_asn_batches(enriched_documents: list[dict], batch_date: Optional[str] 
     for batch in groups.values():
         batch["unique_ips"] = sorted(batch["unique_ips"])
         batch["category_counts"] = dict(batch["category_counts"])
+        batch["frequency_tier_counts"] = dict(batch["frequency_tier_counts"])
+        batch["behavior_tag_counts"] = dict(batch["behavior_tag_counts"])
         results.append(batch)
     return results
 

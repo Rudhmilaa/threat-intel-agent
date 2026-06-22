@@ -140,10 +140,308 @@ LeakIX,exposure_scanning,209.38.208.202/32,https://scan.leakix.net/json,2026-06,
 LeakIX,exposure_scanning,209.38.248.17/32,https://scan.leakix.net/json,2026-06,medium
 LeakIX,exposure_scanning,209.97.180.8/32,https://scan.leakix.net/json,2026-06,medium
 BinaryEdge,internet_scanning,,https://api.binaryedge.io/v1/minions,2026-06,dynamic
-Rapid7 Project Sonar,internet_measurement,,https://www.rapid7.com/research/project-sonar/,2026-06,pending
-Shodan,internet_scanning,,https://book.shodan.io/behind-the-scenes/crawler-algorithm/,2026-06,pending
 Google Security Research,cloud_security_research,,https://www.gstatic.com/ipranges/goog.json,2026-06,pending
 Microsoft Defender Research,cloud_security_research,,https://www.microsoft.com/en-us/download/details.aspx?id=56519,2026-06,pending
 AWS Security Research,cloud_security_research,,https://ip-ranges.amazonaws.com/ip-ranges.json,2026-06,pending
 Akamai Research,cloud_security_research,,https://techdocs.akamai.com/property-manager/pdfs/akamai_ipv4_cidrs.txt,2026-06,pending
 Cloudflare Research,cloud_security_research,,https://www.cloudflare.com/ips-v4/,2026-06,pending
+Shodan,internet_scanning,134.209.95.237/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.112.103/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.112.192/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.13.100/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.190.194/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.190.205/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.190.246/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,137.184.95.216/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,139.59.170.85/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,143.110.239.2/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,143.198.225.197/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,143.198.238.87/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,143.198.68.20/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.202.179/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.225.86/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.240.244/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.240.245/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.240.247/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.241.81/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,147.182.247.10/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,157.245.222.108/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,159.89.124.112/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,164.92.106.15/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,164.92.114.247/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,165.227.110.45/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,165.227.172.206/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,165.227.188.42/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,165.227.55.4/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,165.227.62.247/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,178.128.32.203/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.34/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.35/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.36/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.38/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.40/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.41/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.236.43/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.142.239.16/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.165.190.17/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.165.190.34/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.165.191.26/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,185.165.191.27/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,188.138.9.50/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,195.144.21.56/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.69.74/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.69.98/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.70.114/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.99.130/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,2.59.22.234/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,207.90.244.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,216.117.2.176/28,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,64.225.74.178/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,64.226.86.7/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,64.227.90.185/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,66.240.192.138/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,66.240.205.34/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,66.240.219.133/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,66.240.219.146/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,66.240.236.119/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.135.131/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.146.130/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.146.185/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.146.186/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.147.198/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.147.254/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.158.166/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.165.200/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.167.142/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.199.23/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,80.82.77.139/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,80.82.77.33/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,85.25.103.50/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,85.25.43.94/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,86.54.31.32/28,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,89.248.167.131/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,89.248.172.16/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,93.120.27.62/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,93.174.95.106/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,94.102.49.190/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,94.102.49.193/32,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,109.123.117.224/27,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,146.185.25.160/27,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,173.255.225.139/32,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,45.79.190.10/32,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,5.63.151.96/27,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,66.175.212.77/32,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,66.228.41.127/32,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,71.6.233.0/24,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Rapid7 Project Sonar,internet_measurement,88.202.190.128/27,https://www.rapid7.com/research/project-sonar/,2026-06,high
+Driftnet,internet_measurement,107.170.65.169/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,128.199.8.140/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,157.245.243.118/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,157.245.245.246/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,159.65.216.50/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,159.65.219.252/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,162.243.114.171/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,162.243.116.182/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,162.243.208.127/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,167.99.234.119/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,185.247.137.0/24,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,192.241.179.235/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,193.163.125.0/24,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,45.55.151.3/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,45.55.153.86/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,45.55.158.168/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,45.55.185.224/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,45.55.186.92/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,64.227.108.146/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,64.227.109.89/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,64.227.110.161/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,64.227.99.138/32,https://driftnet.io/,2026-06,medium
+Driftnet,internet_measurement,87.236.176.0/24,https://driftnet.io/,2026-06,medium
+Detectify,attack_surface_scanning,107.20.158.220/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,13.126.5.12/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,3.234.180.95/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,3.7.157.159/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,3.7.173.162/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,34.234.177.119/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,52.17.9.21/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,52.17.98.131/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,52.208.235.127/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,54.73.182.190/32,https://detectify.com/,2026-06,high
+Detectify,attack_surface_scanning,63.32.130.39/32,https://detectify.com/,2026-06,high
+Bitsight,attack_surface_scanning,109.105.208.0/21,https://www.bitsight.com/,2026-06,high
+Bitsight,attack_surface_scanning,185.117.225.0/24,https://www.bitsight.com/,2026-06,high
+Bitsight,attack_surface_scanning,185.180.140.0/22,https://www.bitsight.com/,2026-06,high
+Bitsight,attack_surface_scanning,185.226.196.0/22,https://www.bitsight.com/,2026-06,high
+Bitsight,attack_surface_scanning,45.156.128.0/22,https://www.bitsight.com/,2026-06,high
+Netlas,internet_scanning,93.123.109.120/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.121/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.122/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.123/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.124/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.125/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.17/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.18/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.19/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.20/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.21/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.219/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.22/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.23/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.24/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.25/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.26/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.27/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.28/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.29/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.30/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.31/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.32/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.33/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.34/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.35/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.36/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.37/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.39/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.40/32,https://netlas.io/,2026-06,high
+Netlas,internet_scanning,93.123.109.41/32,https://netlas.io/,2026-06,high
+ZoomEye,internet_scanning,148.153.188.246/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,148.153.188.254/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,148.153.189.62/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,148.153.56.170/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,148.153.56.174/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,150.107.36.236/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,150.107.38.251/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,152.32.142.86/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,154.197.56.163/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,165.154.163.10/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,165.154.23.177/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,222.186.13.130/32,https://www.zoomeye.ai/,2026-06,medium
+ZoomEye,internet_scanning,36.156.22.4/32,https://www.zoomeye.ai/,2026-06,medium
+Criminal IP,internet_scanning,185.242.226.0/24,https://www.criminalip.io/,2026-06,medium
+Tenable ASM,attack_surface_scanning,13.115.104.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,13.210.1.64/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,13.213.79.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,13.56.21.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,13.59.252.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,15.200.117.191/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,15.228.125.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,154.53.40.98/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,162.159.129.83/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,162.159.130.83/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,162.159.140.26/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,164.68.102.233/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,172.65.64.208/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,172.66.0.26/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,18.116.198.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,18.139.204.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,18.168.180.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,18.168.224.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,18.194.95.64/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.234.126/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.235.11/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.236.30/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.249.143/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.251.12/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.251.14/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,207.244.251.16/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.151.114/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.151.116/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.151.120/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.151.124/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.86.45/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.86.46/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.87.112/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.87.66/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.87.68/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.87.70/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.126.87.72/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.145.53.57/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.145.58.124/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,209.145.59.230/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.104/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.108/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.111/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.114/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.119/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.120/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.124/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.126/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.65/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.66/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.68/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.72/29,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.80/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.82/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.88/29,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.216.96/29,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.226.128/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.230.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.239.64/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.240.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.101.240.128/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.106.118.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.108.37.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.124.123.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.132.217.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.251.224.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.26.100.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.31.100.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.32.43.0/27,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.42.1.0/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.42.1.64/30,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.42.1.68/31,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.67.7.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.9.159.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,3.98.92.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,34.201.223.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,34.223.64.0/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.177.219.0/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.182.14.64/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.73.219.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.82.51.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.86.126.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,35.93.174.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,44.192.244.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,44.206.3.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,44.242.181.128/25,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,51.112.93.0/24,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,52.61.37.84/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,54.175.125.192/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,54.255.254.0/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,54.93.254.128/26,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+Tenable ASM,attack_surface_scanning,66.94.119.243/32,https://www.tenable.com/products/tenable-io/exposure-management,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,18.97.19.128/25,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,18.97.26.0/24,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,18.97.5.0/25,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,44.220.185.0/24,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,44.220.188.0/24,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+CrowdStrike Falcon Surface,attack_surface_scanning,98.80.4.0/25,https://www.crowdstrike.com/platform/exposure-management/falcon-surface/,2026-06,high
+Hadrian,attack_surface_scanning,145.220.91.19/32,https://hadrian.io/,2026-06,high
+Intruder,attack_surface_scanning,18.98.162.96/29,https://www.intruder.io/,2026-06,high
+Intruder,attack_surface_scanning,64.52.19.0/24,https://www.intruder.io/,2026-06,high
+The Shadowserver Foundation,internet_measurement,184.105.139.64/26,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,184.105.247.192/26,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,216.218.206.64/26,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.156.0/24,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.195.152/29,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,64.62.197.0/24,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,65.49.1.0/24,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,65.49.20.64/26,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+The Shadowserver Foundation,internet_measurement,74.82.47.0/26,https://www.shadowserver.org/what-we-do/data-collection/,2026-06,medium
+Recorded Future,attack_surface_scanning,13.219.121.241/32,https://www.recordedfuture.com/,2026-06,medium
+Recorded Future,attack_surface_scanning,18.235.110.182/32,https://www.recordedfuture.com/,2026-06,medium
+Recorded Future,attack_surface_scanning,3.233.59.216/32,https://www.recordedfuture.com/,2026-06,medium
+Recorded Future,attack_surface_scanning,54.86.115.253/32,https://www.recordedfuture.com/,2026-06,medium
+Recorded Future,attack_surface_scanning,98.84.1.175/32,https://www.recordedfuture.com/,2026-06,medium
+Recorded Future,attack_surface_scanning,98.88.137.2/32,https://www.recordedfuture.com/,2026-06,medium
+SecurityTrails (Recorded Future),internet_scanning,144.202.82.88/32,https://securitytrails.com/,2026-06,medium
+Shodan,internet_scanning,198.20.69.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.70.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.87.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,198.20.99.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.146.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.147.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Shodan,internet_scanning,71.6.158.0/24,https://book.shodan.io/enterprise/database-files/internet-scanners/,2026-06,high
+Stretchoid,internet_scanning,,https://stretchoid.com/,2026-06,dynamic
+hunter.how,internet_scanning,,https://hunter.how/,2026-06,dynamic
+FOFA,internet_scanning,,https://fofa.info/,2026-06,dynamic

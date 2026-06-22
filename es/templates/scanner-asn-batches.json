@@ -14,6 +14,8 @@
         "event_count": { "type": "integer" },
         "unique_ips": { "type": "ip" },
         "category_counts": { "type": "flattened" },
+        "frequency_tier_counts": { "type": "flattened" },
+        "behavior_tag_counts": { "type": "flattened" },
         "api_calls_total": { "type": "integer" },
         "events": {
           "type": "nested",
@@ -21,7 +23,10 @@
             "source_ip": { "type": "ip" },
             "outcome_category": { "type": "keyword" },
             "destination_port": { "type": "integer" },
-            "attack_type": { "type": "keyword" }
+            "attack_type": { "type": "keyword" },
+            "frequency_tier": { "type": "keyword" },
+            "behavior_tags": { "type": "keyword" },
+            "priority": { "type": "keyword" }
           }
         }
       }

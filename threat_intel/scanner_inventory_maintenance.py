@@ -63,8 +63,6 @@ ONYPHE_PROBE_URLS = (
 )
 
 PENDING_VENDORS = (
-    "Rapid7 Project Sonar",
-    "Shodan",
     "Google Security Research",
     "Microsoft Defender Research",
     "AWS Security Research",
@@ -75,7 +73,7 @@ PENDING_VENDORS = (
 MANUAL_VENDORS = {"The Shadowserver Foundation"}
 
 # Large rotating scanner feeds are stored as JSON snapshots instead of CSV rows.
-FEED_SNAPSHOT_VENDORS = {"BinaryEdge"}
+FEED_SNAPSHOT_VENDORS = {"BinaryEdge", "Stretchoid", "hunter.how", "FOFA"}
 
 
 @dataclass

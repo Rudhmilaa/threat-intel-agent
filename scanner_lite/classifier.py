@@ -84,6 +84,18 @@ def classify_outcome(signals: dict[str, Any]) -> dict:
         reasons.append("Bulletproof hosting context.")
         return _result("suspicious", 0.7, reasons)
 
+    # Honeypot behavioral signals
+    hp = signals.get("honeypot") or {}
+    behavior_tags = hp.get("behavior_tags") or []
+
+    if "peoplesoft_probe" in behavior_tags and "go_http_client" in behavior_tags:
+        reasons.append("Targeted PeopleSoft fingerprinting from unbranded Go HTTP client.")
+        return _result("suspicious", 0.82, reasons)
+
+    if "application_layer_recon" in behavior_tags and not is_known_scanner:
+        reasons.append("Application-layer reconnaissance without known scanner attribution.")
+        return _result("suspicious", 0.75, reasons)
+
     # Unknown
     reasons.append("No strong benign, malicious, or suspicious signal.")
     return _result("unknown", 0.4, reasons)

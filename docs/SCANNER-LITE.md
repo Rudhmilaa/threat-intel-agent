@@ -6,8 +6,9 @@ Full hybrid architecture: see [REFERENCE.md](../REFERENCE.md) and branch `threat
 
 ## What this does
 
-- Tags known scanners from [known_scanner_inventory.csv](../config/scanners/known_scanner_inventory.csv)
+- Tags known scanners from [known_scanner_inventory.csv](../config/scanners/known_scanner_inventory.csv) and feed snapshots under `config/scanners/feeds/`
 - Classifies each IP into **benign**, **malicious**, **suspicious**, or **unknown**
+- Attaches **investigation metadata** (behavior tags, frequency tier, priority) alongside the 4-category outcome
 - Runs a **cost-aware API cascade** (1st / 2nd / 3rd best after eval)
 - Stores per-IP enrichment in **Elasticsearch** with `api_call_trace`
 - Rolls up daily **ASN batches** for ~1000 events/day analysis
@@ -68,6 +69,23 @@ flowchart LR
 
 Each enriched document stores `api_call_trace[]` showing exactly which endpoints fired.
 
+## Investigation metadata
+
+The 4-category `outcome_category` answers **hostility**. A sibling `investigation_metadata` object adds context without a fifth bucket:
+
+| Field | Example | Purpose |
+|---|---|---|
+| `investigation_classification` | `active_application_recon` | Analyst workflow subclass |
+| `scanner_attribution` | `unidentified_go_scanner` | Known vendor or unidentified tool family |
+| `behavior_tags` | `peoplesoft_probe`, `go_http_client` | Honeypot-derived behavior signals |
+| `frequency_tier` | `normal` / `high` / `excessive` | Event volume for this IP in the batch |
+| `priority` | `low` / `medium` / `high` / `critical` | Analyst attention level |
+| `events_in_batch` | `48` | Raw count driving `frequency_tier` |
+
+Frequency thresholds (per `enrich_events` batch): `high` ≥ 10 events/IP, `excessive` ≥ 30.
+
+Honeypot fields (`hpData`, `srcIp`, `app`) boost classification — e.g. PeopleSoft HEAD probes with `Go-http-client/1.1` become `suspicious` even when IP APIs return `unknown`.
+
 ## Quick start
 
 ```bash
@@ -106,7 +124,7 @@ docker compose -f deploy/docker-compose.yml up -d elasticsearch
 
 Elasticsearch only (not SQLite). Indices:
 
-- `scanner-ip-enrichment-*` — per-event enrichment + `api_call_trace`
+- `scanner-ip-enrichment-*` — per-event enrichment + `api_call_trace` + `investigation_metadata`
 - `scanner-ip-cache` — latest enrichment per source IP
 - `scanner-asn-batches-*` — daily ASN rollups
 

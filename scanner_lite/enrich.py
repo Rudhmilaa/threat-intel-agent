@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -9,19 +10,41 @@ from threat_intel.scanners import ScannerRegistry, configure_scanners
 
 from scanner_lite.asn import build_asn_batches, resolve_asn
 from scanner_lite.cascade import run_cascade
-from scanner_lite.classifier import build_scanner_tag
+from scanner_lite.classifier import build_scanner_tag, classify_outcome
+from scanner_lite.metadata import build_investigation_metadata, honeypot_signals_from_event
 from scanner_lite.storage.es_store import ScannerLiteStore
 
 
 def _normalize_event(event: dict) -> dict:
+    source_ip = (
+        event.get("source_ip")
+        or event.get("srcIp")
+        or event.get("src_ip")
+    )
+    destination_ip = (
+        event.get("destination_ip")
+        or event.get("dstIp")
+        or event.get("dst_ip")
+    )
+    destination_port = (
+        event.get("destination_port")
+        or event.get("dstPort")
+        or event.get("dst_port")
+    )
+    hp = event.get("hpData") or {}
     return {
-        "source_ip": event.get("source_ip"),
-        "destination_ip": event.get("destination_ip"),
-        "destination_port": event.get("destination_port"),
-        "attack_type": event.get("attack_type", "unknown"),
-        "protocol": event.get("protocol"),
-        "honeypot_type": event.get("honeypot_type"),
+        "source_ip": source_ip,
+        "destination_ip": destination_ip,
+        "destination_port": destination_port,
+        "attack_type": (
+            event.get("attack_type")
+            or hp.get("eventType")
+            or "unknown"
+        ),
+        "protocol": event.get("protocol") or hp.get("protocol"),
+        "honeypot_type": event.get("honeypot_type") or event.get("app"),
         "sensor_id": event.get("sensor_id"),
+        "original": event if ("hpData" in event or "srcIp" in event) else None,
     }
 
 
@@ -31,6 +54,7 @@ def enrich_ip(
     client_id: str = "scanner-lite",
     event: Optional[dict] = None,
     store: Optional[ScannerLiteStore] = None,
+    events_for_ip: int = 1,
 ) -> dict:
     configure_scanners(ScannerRegistry.for_client(client_id))
 
@@ -43,8 +67,22 @@ def enrich_ip(
     cascade_result = run_cascade(ip_address)
     signals = cascade_result["signals"]
     scanner_tag = build_scanner_tag(signals.get("scanner_tag") or {})
+
+    hp_signals = honeypot_signals_from_event(event)
+    if hp_signals:
+        signals.update(hp_signals)
+        outcome = classify_outcome(signals)
+    else:
+        outcome = cascade_result["outcome"]
+
+    investigation_metadata = build_investigation_metadata(
+        outcome=outcome,
+        scanner_tag=scanner_tag,
+        event=event,
+        events_for_ip=events_for_ip,
+    )
+
     asn = resolve_asn(ip_address, signals)
-    outcome = cascade_result["outcome"]
 
     document = {
         "@timestamp": datetime.now(timezone.utc).isoformat(),
@@ -52,6 +90,7 @@ def enrich_ip(
         "outcome_category": outcome["outcome_category"],
         "outcome_confidence": outcome["confidence"],
         "outcome_reasons": outcome["reasons"],
+        "investigation_metadata": investigation_metadata,
         "scanner_tag": scanner_tag,
         "asn": asn,
         "api_call_trace": cascade_result["api_call_trace"],
@@ -86,12 +125,25 @@ def enrich_events(
     configure_scanners(ScannerRegistry.for_client(client_id))
     es_store = store or ScannerLiteStore()
 
+    ip_counts = Counter(
+        (_normalize_event(e).get("source_ip") or e.get("source_ip"))
+        for e in events
+        if (_normalize_event(e).get("source_ip") or e.get("source_ip"))
+    )
+
     enriched: list[dict] = []
     for event in events:
-        source_ip = event.get("source_ip")
+        normalized = _normalize_event(event)
+        source_ip = normalized.get("source_ip") or event.get("source_ip")
         if not source_ip:
             continue
-        doc = enrich_ip(source_ip, client_id=client_id, event=event, store=es_store)
+        doc = enrich_ip(
+            source_ip,
+            client_id=client_id,
+            event=event,
+            store=es_store,
+            events_for_ip=ip_counts[source_ip],
+        )
         enriched.append(doc)
 
     asn_batches = build_asn_batches(enriched)

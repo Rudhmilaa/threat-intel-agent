@@ -15,6 +15,16 @@
         "outcome_category": { "type": "keyword" },
         "outcome_confidence": { "type": "float" },
         "outcome_reasons": { "type": "text" },
+        "investigation_metadata": {
+          "properties": {
+            "investigation_classification": { "type": "keyword" },
+            "scanner_attribution": { "type": "keyword" },
+            "behavior_tags": { "type": "keyword" },
+            "frequency_tier": { "type": "keyword" },
+            "priority": { "type": "keyword" },
+            "events_in_batch": { "type": "integer" }
+          }
+        },
         "attack_type": { "type": "keyword" },
         "protocol": { "type": "keyword" },
         "honeypot_type": { "type": "keyword" },
