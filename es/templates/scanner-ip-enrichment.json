@@ -1,0 +1,53 @@
+{
+  "index_patterns": ["scanner-ip-enrichment-*", "scanner-ip-cache"],
+  "priority": 220,
+  "template": {
+    "settings": {
+      "number_of_shards": 1
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "source_ip": { "type": "ip" },
+        "destination_ip": { "type": "ip" },
+        "destination_port": { "type": "integer" },
+        "outcome_category": { "type": "keyword" },
+        "outcome_confidence": { "type": "float" },
+        "outcome_reasons": { "type": "text" },
+        "attack_type": { "type": "keyword" },
+        "protocol": { "type": "keyword" },
+        "honeypot_type": { "type": "keyword" },
+        "sensor_id": { "type": "keyword" },
+        "scanner_tag": {
+          "properties": {
+            "vendor": { "type": "keyword" },
+            "scanner_id": { "type": "keyword" },
+            "scanner_type": { "type": "keyword" },
+            "matched_cidr": { "type": "keyword" },
+            "confidence": { "type": "keyword" }
+          }
+        },
+        "asn": {
+          "properties": {
+            "number": { "type": "keyword" },
+            "org": { "type": "keyword" },
+            "country": { "type": "keyword" },
+            "source": { "type": "keyword" }
+          }
+        },
+        "api_call_trace": {
+          "type": "nested",
+          "properties": {
+            "endpoint": { "type": "keyword" },
+            "cost": { "type": "float" },
+            "success": { "type": "boolean" },
+            "error": { "type": "keyword" },
+            "result": { "type": "object", "enabled": false }
+          }
+        },
+        "signals_summary": { "type": "object", "enabled": false }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "index_patterns": ["scanner-asn-batches-*"],
+  "priority": 221,
+  "template": {
+    "settings": {
+      "number_of_shards": 1
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "batch_date": { "type": "date", "format": "yyyy-MM-dd" },
+        "asn_number": { "type": "keyword" },
+        "org": { "type": "keyword" },
+        "event_count": { "type": "integer" },
+        "unique_ips": { "type": "ip" },
+        "category_counts": { "type": "flattened" },
+        "api_calls_total": { "type": "integer" },
+        "events": {
+          "type": "nested",
+          "properties": {
+            "source_ip": { "type": "ip" },
+            "outcome_category": { "type": "keyword" },
+            "destination_port": { "type": "integer" },
+            "attack_type": { "type": "keyword" }
+          }
+        }
+      }
+    }
+  }
+}

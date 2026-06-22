@@ -1,0 +1,35 @@
+{
+  "description": "Golden IP set for endpoint overlap evaluation",
+  "ips": [
+    {
+      "ip": "198.235.24.10",
+      "expected_category": "benign",
+      "label": "Cortex Xpanse scanner"
+    },
+    {
+      "ip": "203.0.113.42",
+      "expected_category": "malicious",
+      "label": "Emotet C2 mock"
+    },
+    {
+      "ip": "45.134.26.12",
+      "expected_category": "suspicious",
+      "label": "VPN suspicious mock"
+    },
+    {
+      "ip": "8.8.8.8",
+      "expected_category": "benign",
+      "label": "Public DNS — likely unknown/benign"
+    },
+    {
+      "ip": "66.132.159.1",
+      "expected_category": "benign",
+      "label": "Censys range"
+    },
+    {
+      "ip": "1.2.3.4",
+      "expected_category": "unknown",
+      "label": "Low-signal public IP"
+    }
+  ]
+}
