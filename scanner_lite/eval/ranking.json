@@ -1,10 +1,10 @@
 {
   "generated_at": "2026-06-15T00:00:00Z",
-  "cascade_order": ["greynoise", "abuseipdb", "otx"],
+  "cascade_order": ["abuseipdb", "otx", "greynoise"],
   "ranking": [
-    {"rank": 1, "endpoint": "greynoise", "score": 0.85},
-    {"rank": 2, "endpoint": "abuseipdb", "score": 0.8},
-    {"rank": 3, "endpoint": "otx", "score": 0.65}
+    {"rank": 1, "endpoint": "abuseipdb", "score": 0.8},
+    {"rank": 2, "endpoint": "otx", "score": 0.65},
+    {"rank": 3, "endpoint": "greynoise", "score": 0.85}
   ],
-  "notes": "Default ranking before eval/overlap.py is run. Re-run eval to refresh."
+  "notes": "GreyNoise deferred to last tier; re-run eval/overlap.py to refresh scores."
 }

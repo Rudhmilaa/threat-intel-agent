@@ -6,11 +6,12 @@ import os
 from typing import Any, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from scanner_lite.enrich import enrich_events, enrich_ip
 from scanner_lite.eval.overlap import RANKING_PATH, run_overlap_eval
+from scanner_lite.stingar_ingest import process_stingar_payload
 from scanner_lite.storage.es_store import ScannerLiteStore
 
 load_dotenv()
@@ -30,6 +31,33 @@ class EnrichEventsRequest(BaseModel):
 
 def _store() -> ScannerLiteStore:
     return ScannerLiteStore()
+
+
+class WebhookAuthConfig:
+    def __init__(self) -> None:
+        self.webhook_secret = os.getenv("STINGAR_WEBHOOK_SECRET")
+
+    def verify(self, request: Request) -> None:
+        if not self.webhook_secret:
+            return
+        provided = request.headers.get("X-Webhook-Secret")
+        if provided != self.webhook_secret:
+            raise HTTPException(status_code=401, detail="Invalid webhook secret.")
+
+
+auth_config = WebhookAuthConfig()
+
+
+def require_webhook_secret(request: Request) -> None:
+    auth_config.verify(request)
+
+
+def _scanner_lite_client_id() -> str:
+    return os.getenv("STINGAR_CLIENT_ID", "scanner-lite")
+
+
+def _scanner_lite_sensor_id() -> Optional[str]:
+    return os.getenv("STINGAR_SENSOR_ID")
 
 
 @app.on_event("startup")
@@ -92,6 +120,37 @@ def run_eval() -> dict:
         return run_overlap_eval(write_ranking=True)
     except Exception as error:
         raise HTTPException(status_code=502, detail=str(error)) from error
+
+
+@app.post("/webhook/stingar", dependencies=[Depends(require_webhook_secret)])
+async def receive_stingar_webhook(request: Request) -> dict:
+    payload = await request.json()
+    try:
+        result = process_stingar_payload(
+            payload,
+            client_id=_scanner_lite_client_id(),
+            sensor_id=_scanner_lite_sensor_id(),
+            store=_store(),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"Enrichment failed: {error}") from error
+
+    return {
+        "status": result["status"],
+        "service": result["service"],
+        "received_events": result["received_events"],
+        "enriched_count": result["enriched_count"],
+        "category_counts": result["category_counts"],
+        "total_api_calls": result["total_api_calls"],
+        "es_stats": result["es_stats"],
+    }
+
+
+@app.post("/webhook/stingar/batch", dependencies=[Depends(require_webhook_secret)])
+async def receive_stingar_batch(request: Request) -> dict:
+    return await receive_stingar_webhook(request)
 
 
 def main() -> None:

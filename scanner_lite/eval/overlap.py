@@ -94,7 +94,9 @@ def run_overlap_eval(*, write_ranking: bool = True) -> dict:
     for index, entry in enumerate(scores, start=1):
         entry["rank"] = index
 
-    cascade_order = [entry["endpoint"] for entry in scores[:3]]
+    # GreyNoise is intentionally last in the paid cascade (cost / overlap policy).
+    paid_ranked = [entry["endpoint"] for entry in scores if entry["endpoint"] != "greynoise"]
+    cascade_order = paid_ranked[:2] + ["greynoise"]
 
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),

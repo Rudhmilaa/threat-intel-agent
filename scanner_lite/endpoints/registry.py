@@ -25,7 +25,7 @@ ADAPTERS = {
 }
 
 # Default paid cascade after local_csv (overridden by eval/ranking.json when present)
-DEFAULT_CASCADE = ["greynoise", "abuseipdb", "otx"]
+DEFAULT_CASCADE = ["abuseipdb", "otx", "greynoise"]
 
 ENDPOINT_ORDER = list(ADAPTERS.keys())
 

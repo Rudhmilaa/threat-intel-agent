@@ -1,13 +1,33 @@
 # Kibana dashboards
 
-Elasticsearch is the **primary store** for enriched STINGAR sessions. Import or build Kibana views against these index patterns:
+Elasticsearch is the **primary store** for enriched sessions. Import or build Kibana views against these index patterns:
 
 | Index pattern | Purpose |
 |---|---|
 | `stingar-*` | Attack Analysis session list — filter/sort on `effective_severity`, `effective_signals`, `src_ip` |
 | `intel-summaries` | IP intelligence summary cache (ops/debug) |
+| `scanner-ip-enrichment-*` | Scanner-lite per-IP enrichment — `outcome_category`, `investigation_metadata`, `api_call_trace` |
+| `scanner-asn-batches-*` | Scanner-lite daily ASN rollups — `category_counts`, `behavior_tag_counts` |
 
-## Recommended views
+## Scanner enrichment lite
+
+Pre-built saved objects: [scanner-lite/scanner-lite.ndjson](scanner-lite/scanner-lite.ndjson)
+
+```bash
+./scripts/import-scanner-lite-dashboards.sh
+# or as part of full deploy:
+./scripts/deploy-scanner-lite.sh up
+```
+
+Dashboard: **Scanner Enrichment Lite** — IP enrichment table + ASN batch table side by side.
+
+Recommended filters on `scanner-ip-enrichment-*`:
+
+- `outcome_category: suspicious` — honeypot-boosted probes (e.g. PeopleSoft HEAD scans)
+- `investigation_metadata.priority: high` — analyst attention queue
+- `scanner_tag.vendor: *` — known scanner inventory hits
+
+## Full STINGAR stack (hybrid)
 
 1. **Attack Analysis** — Data table on `stingar-enriched-*`, columns: `@timestamp`, `effective_severity`, `src_ip`, `effective_signals`, `stingar.honeypot_type`, `investigation.classification`
 2. **Severity over time** — Lens area chart, split by `effective_severity`

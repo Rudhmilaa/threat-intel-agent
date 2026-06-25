@@ -71,7 +71,11 @@ def normalize_event(raw_event: dict, default_sensor_id: Optional[str] = None) ->
     }
 
 
-def extract_events(payload: dict | list, default_sensor_id: Optional[str] = None) -> list[dict]:
+def extract_raw_stingar_events(
+    payload: dict | list,
+    default_sensor_id: Optional[str] = None,
+) -> list[dict]:
+    """Return native STINGAR/Cowrie event dicts from a webhook payload."""
     if isinstance(payload, list):
         raw_events = payload
     elif isinstance(payload, dict):
@@ -84,4 +88,19 @@ def extract_events(payload: dict | list, default_sensor_id: Optional[str] = None
     else:
         raw_events = []
 
+    normalized: list[dict] = []
+    for event in raw_events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("source_ip") and event.get("original"):
+            normalized.append(event["original"])
+            continue
+        if default_sensor_id and not _pick(event, "sensor_id", "sensorId", "hostname"):
+            event = {**event, "sensor_id": default_sensor_id}
+        normalized.append(event)
+    return normalized
+
+
+def extract_events(payload: dict | list, default_sensor_id: Optional[str] = None) -> list[dict]:
+    raw_events = extract_raw_stingar_events(payload, default_sensor_id=default_sensor_id)
     return [normalize_event(event, default_sensor_id=default_sensor_id) for event in raw_events]

@@ -16,22 +16,29 @@ from scanner_lite.storage.es_store import ScannerLiteStore
 
 
 def _normalize_event(event: dict) -> dict:
+    raw = event.get("original") if event.get("original") else event
     source_ip = (
         event.get("source_ip")
+        or raw.get("srcIp")
+        or raw.get("src_ip")
         or event.get("srcIp")
         or event.get("src_ip")
     )
     destination_ip = (
         event.get("destination_ip")
+        or raw.get("dstIp")
+        or raw.get("dst_ip")
         or event.get("dstIp")
         or event.get("dst_ip")
     )
     destination_port = (
         event.get("destination_port")
+        or raw.get("dstPort")
+        or raw.get("dst_port")
         or event.get("dstPort")
         or event.get("dst_port")
     )
-    hp = event.get("hpData") or {}
+    hp = raw.get("hpData") or event.get("hpData") or {}
     return {
         "source_ip": source_ip,
         "destination_ip": destination_ip,
@@ -42,9 +49,9 @@ def _normalize_event(event: dict) -> dict:
             or "unknown"
         ),
         "protocol": event.get("protocol") or hp.get("protocol"),
-        "honeypot_type": event.get("honeypot_type") or event.get("app"),
-        "sensor_id": event.get("sensor_id"),
-        "original": event if ("hpData" in event or "srcIp" in event) else None,
+        "honeypot_type": event.get("honeypot_type") or raw.get("app") or event.get("app"),
+        "sensor_id": event.get("sensor_id") or raw.get("sensor_id"),
+        "original": raw if (hp or "srcIp" in raw or "hpData" in raw) else None,
     }
 
 

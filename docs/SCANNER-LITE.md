@@ -21,6 +21,7 @@ No central sync, no sharing policy, no LLM at runtime.
 flowchart TB
     subgraph ingest [Ingest]
         API["POST /scanner-lite/enrich/events"]
+        WH["POST /webhook/stingar"]
     end
 
     subgraph tier0 [Tier0 Free]
@@ -44,6 +45,7 @@ flowchart TB
     end
 
     API --> CSV
+    WH --> CSV
     CSV -->|known scanner| CAT
     CSV -->|no match| ASN --> E1 --> E2 --> E3
     E1 --> CAT
@@ -61,10 +63,10 @@ flowchart LR
 
     IP --> CSV["local_csv $0"]
     CSV -->|198.235.24.10 match| BENIGN["benign STOP"]
-    CSV -->|203.0.113.42 no match| GN["greynoise $0"]
+    CSV -->|203.0.113.42 no match| AIP["abuseipdb"]
+    AIP -->|still unresolved| OTX["otx $0"]
+    OTX -->|still unresolved| GN["greynoise $0 last"]
     GN -->|malicious| MAL["malicious STOP"]
-    GN -->|unknown| AIP["abuseipdb"]
-    AIP --> OTX["otx if still unresolved"]
 ```
 
 Each enriched document stores `api_call_trace[]` showing exactly which endpoints fired.
@@ -95,12 +97,66 @@ export ELASTICSEARCH_URL=http://127.0.0.1:9200
 ./scripts/deploy-scanner-lite.sh up
 ```
 
+This starts Elasticsearch, Kibana (`:5601`), the scanner-lite API (`:8091`), loads demo events, and imports the **Scanner Enrichment Lite** dashboard.
+
 Or manually:
 
 ```bash
-docker compose -f deploy/docker-compose.yml up -d elasticsearch
+docker compose -f deploy/docker-compose.yml up -d elasticsearch kibana
 .venv-1/bin/python -m scanner_lite.server
+./scripts/import-scanner-lite-dashboards.sh
 ```
+
+## STINGAR webhook ingest
+
+Point honeypot nodes at the scanner-lite server instead of the full hybrid listener when you only need scanner classification + ES storage:
+
+```bash
+# Same payload shapes as stingar/webhook_listener.py
+curl -X POST http://127.0.0.1:8091/webhook/stingar \
+  -H "Content-Type: application/json" \
+  -H "X-Webhook-Secret: $STINGAR_WEBHOOK_SECRET" \
+  -d '{
+    "events": [
+      {
+        "app": "peoplesoft",
+        "srcIp": "52.29.178.95",
+        "dstIp": "150.136.255.191",
+        "dstPort": 8000,
+        "hpData": {
+          "method": "HEAD",
+          "path": "/ps/signon.html",
+          "eventType": "peoplesoft-scan",
+          "headers": {"UserAgent": "Go-http-client/1.1"}
+        }
+      }
+    ]
+  }'
+```
+
+Environment variables (shared with full STINGAR stack):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `STINGAR_CLIENT_ID` | `scanner-lite` | Client id passed to enrichment |
+| `STINGAR_SENSOR_ID` | — | Default sensor id when events omit it |
+| `STINGAR_WEBHOOK_SECRET` | — | If set, require `X-Webhook-Secret` header |
+
+Native STINGAR fields (`srcIp`, `hpData`, `app`) are preserved so honeypot behavior tags and PeopleSoft probes classify correctly.
+
+## Kibana dashboards
+
+Importable saved objects live in [es/dashboards/scanner-lite/scanner-lite.ndjson](../es/dashboards/scanner-lite/scanner-lite.ndjson).
+
+| View | Index pattern | Purpose |
+|---|---|---|
+| **Scanner Enrichment Lite** dashboard | `scanner-ip-enrichment-*`, `scanner-asn-batches-*` | IP outcomes + ASN batch rollups |
+| IP enrichment table | `scanner-ip-enrichment-*` | `source_ip`, `outcome_category`, `scanner_tag.vendor`, `investigation_metadata.*` |
+| ASN batches table | `scanner-asn-batches-*` | Daily ASN counts by outcome category |
+
+After deploy, open: `http://127.0.0.1:5601/app/dashboards#/view/scanner-lite-dashboard`
+
+Re-import anytime: `./scripts/import-scanner-lite-dashboards.sh` or `./scripts/deploy-scanner-lite.sh dashboards`
 
 ## API endpoints
 
@@ -109,6 +165,8 @@ docker compose -f deploy/docker-compose.yml up -d elasticsearch
 | GET | `/health` | ES reachability |
 | POST | `/scanner-lite/enrich/ip` | Single IP enrichment |
 | POST | `/scanner-lite/enrich/events` | Batch honeypot events |
+| POST | `/webhook/stingar` | STINGAR webhook (single or wrapped batch) |
+| POST | `/webhook/stingar/batch` | Alias for `/webhook/stingar` |
 | GET | `/scanner-lite/batches/asn?date=YYYY-MM-DD` | ASN batch rollups |
 | GET | `/scanner-lite/eval/ranking` | Current cascade ranking |
 | POST | `/scanner-lite/eval/run` | Re-run overlap eval |

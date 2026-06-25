@@ -15,7 +15,7 @@ How scanner-lite picks and ranks external enrichment APIs to minimize cost at ~1
 | 7 | otx | `endpoints/otx.py` | $0 | OTX pulse count |
 | 8 | ipinfo | `endpoints/ipinfo.py` | $0 | ASN/org enrichment |
 
-`local_csv` always runs first. Paid cascade uses top 3 from eval ranking (default: `greynoise` → `abuseipdb` → `otx`).
+`local_csv` always runs first. Paid cascade uses top 3 from eval ranking (default: `abuseipdb` → `otx` → `greynoise`).
 
 ## Stop conditions
 
@@ -67,11 +67,11 @@ ASN metadata is resolved **once per new ASN**, not per IP.
 
 ```json
 {
-  "cascade_order": ["greynoise", "abuseipdb", "otx"],
+  "cascade_order": ["abuseipdb", "otx", "greynoise"],
   "ranking": [
-    {"rank": 1, "endpoint": "greynoise", "score": 0.85},
-    {"rank": 2, "endpoint": "abuseipdb", "score": 0.8},
-    {"rank": 3, "endpoint": "otx", "score": 0.65}
+    {"rank": 1, "endpoint": "abuseipdb", "score": 0.8},
+    {"rank": 2, "endpoint": "otx", "score": 0.65},
+    {"rank": 3, "endpoint": "greynoise", "score": 0.85}
   ]
 }
 ```

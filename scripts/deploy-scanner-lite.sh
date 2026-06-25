@@ -14,6 +14,7 @@ export STINGAR_ES_URL="${STINGAR_ES_URL:-http://127.0.0.1:9200}"
 export ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-$STINGAR_ES_URL}"
 export STINGAR_STORAGE_BACKEND=elasticsearch
 export SCANNER_LITE_PORT="${SCANNER_LITE_PORT:-8091}"
+export KIBANA_URL="${KIBANA_URL:-http://127.0.0.1:5601}"
 
 log() { echo "[deploy-scanner-lite] $*"; }
 
@@ -31,14 +32,33 @@ ensure_docker() {
 
 start_es() {
   ensure_docker
-  log "Starting Elasticsearch..."
-  docker compose -f deploy/docker-compose.yml up -d elasticsearch
+  log "Starting Elasticsearch + Kibana..."
+  docker compose -f deploy/docker-compose.yml up -d elasticsearch kibana
   for _ in $(seq 1 60); do
     curl -fs "$STINGAR_ES_URL" >/dev/null 2>&1 && break
     sleep 2
   done
   curl -fs "$STINGAR_ES_URL" >/dev/null 2>&1 || { echo "ES not ready" >&2; exit 1; }
   log "Elasticsearch is up"
+}
+
+start_kibana() {
+  for _ in $(seq 1 60); do
+    curl -fs "$KIBANA_URL/api/status" >/dev/null 2>&1 && break
+    sleep 3
+  done
+  if curl -fs "$KIBANA_URL/api/status" >/dev/null 2>&1; then
+    log "Kibana is up at $KIBANA_URL"
+  else
+    log "Kibana not ready — skip dashboard import (start with: docker compose -f deploy/docker-compose.yml up -d kibana)"
+  fi
+}
+
+import_dashboards() {
+  if curl -fs "$KIBANA_URL/api/status" >/dev/null 2>&1; then
+    log "Importing scanner-lite Kibana dashboards..."
+    "$ROOT/scripts/import-scanner-lite-dashboards.sh" || log "Dashboard import failed (non-fatal)"
+  fi
 }
 
 apply_templates() {
@@ -90,6 +110,27 @@ demo_events() {
     }' | "$PYTHON" -m json.tool
 
   echo
+  log "STINGAR webhook demo (PeopleSoft probe)..."
+  curl -fsS -X POST "http://127.0.0.1:$SCANNER_LITE_PORT/webhook/stingar" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "events": [
+        {
+          "app": "peoplesoft",
+          "srcIp": "52.29.178.95",
+          "dstIp": "150.136.255.191",
+          "dstPort": 8000,
+          "hpData": {
+            "method": "HEAD",
+            "path": "/ps/signon.html",
+            "eventType": "peoplesoft-scan",
+            "headers": {"UserAgent": "Go-http-client/1.1"}
+          }
+        }
+      ]
+    }' | "$PYTHON" -m json.tool
+
+  echo
   log "ASN batches:"
   curl -fsS "http://127.0.0.1:$SCANNER_LITE_PORT/scanner-lite/batches/asn" | "$PYTHON" -m json.tool
 }
@@ -98,17 +139,22 @@ case "${1:-up}" in
   up)
     start_es
     apply_templates
-    "$PYTHON" -m scanner_lite.eval.overlap 2>/dev/null || true
+    start_kibana
     start_server
     demo_events
+    import_dashboards
+    log "Kibana: $KIBANA_URL/app/dashboards#/view/scanner-lite-dashboard"
     log "Logs: .run/scanner-lite.log"
     ;;
   es-only)
     start_es
     apply_templates
     ;;
+  dashboards)
+    import_dashboards
+    ;;
   *)
-    echo "Usage: $0 [up|es-only]" >&2
+    echo "Usage: $0 [up|es-only|dashboards]" >&2
     exit 1
     ;;
 esac
