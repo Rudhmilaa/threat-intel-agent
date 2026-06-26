@@ -26,7 +26,8 @@
             "attack_type": { "type": "keyword" },
             "frequency_tier": { "type": "keyword" },
             "behavior_tags": { "type": "keyword" },
-            "priority": { "type": "keyword" }
+            "priority": { "type": "keyword" },
+            "scanner_tag": { "type": "flattened" }
           }
         }
       }

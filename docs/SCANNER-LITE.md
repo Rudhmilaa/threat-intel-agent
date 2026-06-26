@@ -82,11 +82,32 @@ The 4-category `outcome_category` answers **hostility**. A sibling `investigatio
 | `behavior_tags` | `peoplesoft_probe`, `go_http_client` | Honeypot-derived behavior signals |
 | `frequency_tier` | `normal` / `high` / `excessive` | Event volume for this IP in the batch |
 | `priority` | `low` / `medium` / `high` / `critical` | Analyst attention level |
-| `events_in_batch` | `48` | Raw count driving `frequency_tier` |
+| `events_in_batch` | `48` | Raw count for this IP in the current HTTP payload |
+| `events_today` | `48` | Total events for this IP today (ES history + current batch) |
 
-Frequency thresholds (per `enrich_events` batch): `high` ≥ 10 events/IP, `excessive` ≥ 30.
+Frequency thresholds: `high` ≥ 10 events/IP **today**, `excessive` ≥ 30. Counts come from **`events_today`** — Elasticsearch docs already indexed for that IP today plus the current batch — not just the current HTTP payload. The batch-only count is still stored as `events_in_batch`.
 
 Honeypot fields (`hpData`, `srcIp`, `app`) boost classification — e.g. PeopleSoft HEAD probes with `Go-http-client/1.1` become `suspicious` even when IP APIs return `unknown`.
+
+## Session record integration
+
+Each enriched event is **dual-written**:
+
+| Index | Purpose |
+|---|---|
+| `scanner-ip-enrichment-*` | Scanner-lite ops view, `api_call_trace`, IP cache |
+| `stingar-enriched-*` | Analyst session records — `investigation.*`, `effective_severity`, `taxonomy.tags`, `hp_data.enrichment.scanner_lite` |
+
+The session mapper lives in `scanner_lite/session_document.py`. Webhook and batch ingest return `session_es_stats` alongside `es_stats`.
+
+Query enriched sessions (same index as full STINGAR stack):
+
+```bash
+curl 'http://127.0.0.1:8091/scanner-lite/sessions?q=outcome:suspicious&hours=24'
+curl 'http://127.0.0.1:8091/scanner-lite/sessions?q=priority:high%20src_ip:52.29.178.95'
+```
+
+Session query aliases for scanner-lite fields: `outcome`, `category`, `priority`, `behavior`, `scanner`, plus existing `severity`, `signal`, `verdict`, `src_ip`, `honeypot`.
 
 ## Quick start
 
@@ -168,6 +189,7 @@ Re-import anytime: `./scripts/import-scanner-lite-dashboards.sh` or `./scripts/d
 | POST | `/webhook/stingar` | STINGAR webhook (single or wrapped batch) |
 | POST | `/webhook/stingar/batch` | Alias for `/webhook/stingar` |
 | GET | `/scanner-lite/batches/asn?date=YYYY-MM-DD` | ASN batch rollups |
+| GET | `/scanner-lite/sessions?q=...&hours=24` | Search `stingar-enriched-*` session records |
 | GET | `/scanner-lite/eval/ranking` | Current cascade ranking |
 | POST | `/scanner-lite/eval/run` | Re-run overlap eval |
 

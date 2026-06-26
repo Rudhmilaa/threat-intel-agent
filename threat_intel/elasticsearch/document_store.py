@@ -113,6 +113,9 @@ class ElasticsearchDocumentStore:
         hits = []
         for hit in result.get("hits", {}).get("hits", []):
             source = hit.get("_source", {})
+            scanner_lite = (
+                (source.get("hp_data") or {}).get("enrichment") or {}
+            ).get("scanner_lite") or {}
             hits.append(
                 {
                     "id": hit.get("_id"),
@@ -124,6 +127,10 @@ class ElasticsearchDocumentStore:
                     "honeypot_type": source.get("stingar", {}).get("honeypot_type"),
                     "attack_type": source.get("stingar", {}).get("attack_type"),
                     "classification": source.get("investigation", {}).get("classification"),
+                    "outcome_category": source.get("investigation", {}).get("category"),
+                    "priority": source.get("investigation", {}).get("priority"),
+                    "scanner_vendor": scanner_lite.get("scanner_vendor"),
+                    "events_today": scanner_lite.get("events_today"),
                     "document": source,
                 }
             )

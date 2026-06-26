@@ -35,6 +35,14 @@ class SessionQueryTests(unittest.TestCase):
         filters = body["query"]["bool"]["filter"]
         self.assertTrue(any("elastic_metadata.client_id" in str(f) for f in filters))
 
+    def test_scanner_lite_outcome_alias(self):
+        terms = parse_session_query("outcome:suspicious priority:high")
+        self.assertEqual(terms[0].field, "outcome")
+        self.assertEqual(terms[1].field, "priority")
+        body = session_query_to_es("outcome:benign", client_id="scanner-lite", hours=48)
+        must = body["query"]["bool"]["must"]
+        self.assertTrue(any("investigation.category" in str(clause) for clause in must))
+
 
 if __name__ == "__main__":
     unittest.main()

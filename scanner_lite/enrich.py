@@ -12,6 +12,7 @@ from scanner_lite.asn import build_asn_batches, resolve_asn
 from scanner_lite.cascade import run_cascade
 from scanner_lite.classifier import build_scanner_tag, classify_outcome
 from scanner_lite.metadata import build_investigation_metadata, honeypot_signals_from_event
+from scanner_lite.session_document import to_stingar_session
 from scanner_lite.storage.es_store import ScannerLiteStore
 
 
@@ -61,7 +62,9 @@ def enrich_ip(
     client_id: str = "scanner-lite",
     event: Optional[dict] = None,
     store: Optional[ScannerLiteStore] = None,
-    events_for_ip: int = 1,
+    events_in_batch: int = 1,
+    events_today: Optional[int] = None,
+    events_for_ip: Optional[int] = None,
 ) -> dict:
     configure_scanners(ScannerRegistry.for_client(client_id))
 
@@ -70,6 +73,9 @@ def enrich_ip(
         cached = es_store.get_ip_cache(ip_address)
         if cached:
             return cached
+
+    if events_today is None:
+        events_today = events_for_ip if events_for_ip is not None else events_in_batch
 
     cascade_result = run_cascade(ip_address)
     signals = cascade_result["signals"]
@@ -86,7 +92,8 @@ def enrich_ip(
         outcome=outcome,
         scanner_tag=scanner_tag,
         event=event,
-        events_for_ip=events_for_ip,
+        events_in_batch=events_in_batch,
+        events_today=events_today,
     )
 
     asn = resolve_asn(ip_address, signals)
@@ -123,11 +130,29 @@ def enrich_ip(
     return document
 
 
+def _index_session_documents(
+    enriched_pairs: list[tuple[dict, Optional[dict]]],
+    *,
+    client_id: str,
+) -> dict[str, Any]:
+    if not enriched_pairs:
+        return {"indexed": 0, "failed": 0, "indices": [], "errors": []}
+
+    from threat_intel.elasticsearch.document_store import ElasticsearchDocumentStore
+
+    session_docs = [
+        to_stingar_session(doc, event, client_id=client_id)
+        for doc, event in enriched_pairs
+    ]
+    return ElasticsearchDocumentStore().index_documents(session_docs)
+
+
 def enrich_events(
     events: list[dict],
     *,
     client_id: str = "scanner-lite",
     store: Optional[ScannerLiteStore] = None,
+    index_sessions: bool = True,
 ) -> dict[str, Any]:
     configure_scanners(ScannerRegistry.for_client(client_id))
     es_store = store or ScannerLiteStore()
@@ -138,23 +163,38 @@ def enrich_events(
         if (_normalize_event(e).get("source_ip") or e.get("source_ip"))
     )
 
+    historical_counts = {
+        ip: es_store.count_ip_events_today(ip)
+        for ip in ip_counts
+    }
+    occurrence_in_batch: Counter[str] = Counter()
+
     enriched: list[dict] = []
+    enriched_pairs: list[tuple[dict, Optional[dict]]] = []
     for event in events:
         normalized = _normalize_event(event)
         source_ip = normalized.get("source_ip") or event.get("source_ip")
         if not source_ip:
             continue
+        occurrence_in_batch[source_ip] += 1
+        events_today = historical_counts[source_ip] + occurrence_in_batch[source_ip]
         doc = enrich_ip(
             source_ip,
             client_id=client_id,
             event=event,
             store=es_store,
-            events_for_ip=ip_counts[source_ip],
+            events_in_batch=ip_counts[source_ip],
+            events_today=events_today,
         )
         enriched.append(doc)
+        enriched_pairs.append((doc, event))
 
     asn_batches = build_asn_batches(enriched)
     batch_stats = es_store.index_asn_batches(asn_batches)
+
+    session_stats: dict[str, Any] = {"indexed": 0, "failed": 0}
+    if index_sessions and enriched_pairs:
+        session_stats = _index_session_documents(enriched_pairs, client_id=client_id)
 
     category_counts: dict[str, int] = {}
     total_api_calls = 0
@@ -170,6 +210,7 @@ def enrich_events(
         "total_api_calls": total_api_calls,
         "asn_batches": asn_batches,
         "es_stats": batch_stats,
+        "session_es_stats": session_stats,
     }
 
 

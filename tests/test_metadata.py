@@ -60,13 +60,15 @@ class TestMetadata(unittest.TestCase):
             outcome=outcome,
             scanner_tag=None,
             event=PEOPLESOFT_EVENT,
-            events_for_ip=48,
+            events_in_batch=1,
+            events_today=48,
         )
         self.assertEqual(meta["investigation_classification"], "active_application_recon")
         self.assertEqual(meta["scanner_attribution"], "unidentified_go_scanner")
         self.assertEqual(meta["frequency_tier"], "excessive")
         self.assertEqual(meta["priority"], "high")
-        self.assertEqual(meta["events_in_batch"], 48)
+        self.assertEqual(meta["events_in_batch"], 1)
+        self.assertEqual(meta["events_today"], 48)
 
     def test_known_scanner_high_noise_metadata(self):
         outcome = {"outcome_category": "benign", "confidence": 0.95, "reasons": []}
@@ -75,7 +77,8 @@ class TestMetadata(unittest.TestCase):
             outcome=outcome,
             scanner_tag=scanner_tag,
             event=None,
-            events_for_ip=50,
+            events_in_batch=50,
+            events_today=50,
         )
         self.assertEqual(meta["investigation_classification"], "known_scanner_high_noise")
         self.assertEqual(meta["scanner_attribution"], "known:Censys")

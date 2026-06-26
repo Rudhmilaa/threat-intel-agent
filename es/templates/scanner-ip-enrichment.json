@@ -22,7 +22,8 @@
             "behavior_tags": { "type": "keyword" },
             "frequency_tier": { "type": "keyword" },
             "priority": { "type": "keyword" },
-            "events_in_batch": { "type": "integer" }
+            "events_in_batch": { "type": "integer" },
+            "events_today": { "type": "integer" }
           }
         },
         "attack_type": { "type": "keyword" },

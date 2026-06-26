@@ -105,6 +105,28 @@ def get_asn_batches(date: Optional[str] = Query(default=None)) -> dict:
     return {"batch_date": batch_date, "count": len(batches), "batches": batches}
 
 
+@app.get("/scanner-lite/sessions")
+def search_sessions(
+    q: str = Query(default=""),
+    hours: int = Query(default=24, ge=1, le=168),
+    size: int = Query(default=50, ge=1, le=200),
+    client_id: Optional[str] = Query(default=None),
+) -> dict:
+    """Search stingar-enriched session records written by scanner-lite enrichment."""
+    from threat_intel.elasticsearch.document_store import ElasticsearchDocumentStore
+
+    cid = client_id or _scanner_lite_client_id()
+    try:
+        return ElasticsearchDocumentStore().search_sessions(
+            q,
+            client_id=cid,
+            hours=hours,
+            size=size,
+        )
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=str(error)) from error
+
+
 @app.get("/scanner-lite/eval/ranking")
 def get_eval_ranking() -> dict:
     if RANKING_PATH.exists():
@@ -145,6 +167,7 @@ async def receive_stingar_webhook(request: Request) -> dict:
         "category_counts": result["category_counts"],
         "total_api_calls": result["total_api_calls"],
         "es_stats": result["es_stats"],
+        "session_es_stats": result.get("session_es_stats"),
     }
 
 

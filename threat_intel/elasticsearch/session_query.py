@@ -24,6 +24,11 @@ FIELD_ALIASES = {
     "protocol": "network.protocol",
     "sensor": "stingar.sensor_id",
     "verdict": "investigation.classification",
+    "outcome": "investigation.category",
+    "category": "investigation.category",
+    "priority": "investigation.priority",
+    "behavior": "hp_data.enrichment.scanner_lite.behavior_tags",
+    "scanner": "hp_data.enrichment.scanner_lite.scanner_vendor",
     "client_id": "elastic_metadata.client_id",
 }
 

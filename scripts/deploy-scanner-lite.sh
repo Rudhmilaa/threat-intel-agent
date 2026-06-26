@@ -69,6 +69,9 @@ apply_templates() {
   curl -fsS -X PUT "$STINGAR_ES_URL/_index_template/scanner-asn-batches" \
     -H "Content-Type: application/json" \
     -d @"$ROOT/es/templates/scanner-asn-batches.json" >/dev/null
+  curl -fsS -X PUT "$STINGAR_ES_URL/_index_template/stingar-enriched" \
+    -H "Content-Type: application/json" \
+    -d @"$ROOT/es/templates/stingar-enriched.json" >/dev/null
   log "Templates applied"
 }
 

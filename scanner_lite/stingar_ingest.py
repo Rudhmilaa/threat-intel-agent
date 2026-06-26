@@ -33,5 +33,6 @@ def process_stingar_payload(
         "category_counts": result.get("category_counts", {}),
         "total_api_calls": result.get("total_api_calls", 0),
         "es_stats": result.get("es_stats"),
+        "session_es_stats": result.get("session_es_stats"),
         "enriched_documents": result.get("enriched_documents", []),
     }

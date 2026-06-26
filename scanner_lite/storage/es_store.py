@@ -25,7 +25,7 @@ class ScannerLiteStore:
         return f"{prefix}-{date_str}"
 
     def ensure_templates(self) -> None:
-        for name in ("scanner-ip-enrichment", "scanner-asn-batches"):
+        for name in ("scanner-ip-enrichment", "scanner-asn-batches", "stingar-enriched"):
             path = TEMPLATES_DIR / f"{name}.json"
             if path.exists():
                 self.client.put_template(name, json.loads(path.read_text(encoding="utf-8")))
@@ -39,6 +39,19 @@ class ScannerLiteStore:
             return result
         except RuntimeError:
             return None
+
+    def count_ip_events_today(self, source_ip: str, *, batch_date: Optional[str] = None) -> int:
+        """Count enrichment docs indexed today for ``source_ip`` (before current batch)."""
+        index_name = self._daily_index(IP_INDEX_PREFIX, batch_date)
+        try:
+            result = self.client.request(
+                "POST",
+                f"{index_name}/_count",
+                {"query": {"term": {"source_ip": source_ip}}},
+            )
+            return int(result.get("count", 0))
+        except RuntimeError:
+            return 0
 
     def index_ip_document(self, document: dict) -> dict:
         source_ip = document.get("source_ip", "")

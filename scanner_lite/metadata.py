@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 FREQUENCY_TIERS = ("normal", "high", "excessive")
 PRIORITIES = ("informational", "low", "medium", "high", "critical")
@@ -120,11 +120,23 @@ def build_investigation_metadata(
     outcome: dict,
     scanner_tag: dict | None,
     event: dict | None,
-    events_for_ip: int = 1,
+    events_in_batch: int = 1,
+    events_today: Optional[int] = None,
+    events_for_ip: Optional[int] = None,
 ) -> dict:
+    """Build investigation metadata.
+
+    ``events_today`` drives frequency/priority (cross-request history + current batch).
+    ``events_in_batch`` is the count of this IP in the current HTTP payload only.
+    ``events_for_ip`` is deprecated; treated as ``events_today`` when provided alone.
+    """
+    if events_for_ip is not None and events_today is None:
+        events_today = events_for_ip
+    today_count = events_today if events_today is not None else events_in_batch
+
     ctx = extract_honeypot_context(event)
     behavior_tags = derive_behavior_tags(ctx)
-    freq = frequency_tier(events_for_ip)
+    freq = frequency_tier(today_count)
     outcome_category = outcome.get("outcome_category", "unknown")
 
     return {
@@ -138,7 +150,8 @@ def build_investigation_metadata(
         "behavior_tags": behavior_tags,
         "frequency_tier": freq,
         "priority": derive_priority(outcome_category, freq, behavior_tags),
-        "events_in_batch": events_for_ip,
+        "events_in_batch": events_in_batch,
+        "events_today": today_count,
     }
 
 
