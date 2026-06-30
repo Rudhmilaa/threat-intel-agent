@@ -1,0 +1,74 @@
+components:
+  schemas:
+    Errors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+
+    InternalServerError:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Internal Server Error"
+              description:
+                type: string
+                example: "An internal server error occurred"
+
+    NotFound:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Not Found"
+              description:
+                type: string
+                example: "The requested resource was not found"
+
+    BadRequest:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Bad Request"
+              description:
+                type: string
+                example: "The request was malformed or invalid"
+
+    ServiceUnavailable:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+                example: "Service Unavailable"
+              description:
+                type: string
+                example: "The service is temporarily unavailable"

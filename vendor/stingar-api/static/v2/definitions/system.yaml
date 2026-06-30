@@ -1,0 +1,194 @@
+system-version:
+  get:
+    tags:
+      - System
+    summary: Get current system version
+    description: Retrieve the currently installed STINGAR version and related information
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: Current version information
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/SystemVersion'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+system-update-check:
+  get:
+    tags:
+      - System
+    summary: Check for available updates
+    description: Check if a newer version of STINGAR is available from the remote store
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: Update check results
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateCheckResponse'
+      '503':
+        description: Store unavailable
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                current_version:
+                  type: string
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+system-update-status:
+  get:
+    tags:
+      - System
+    summary: Get update service status
+    description: Get comprehensive status of the update service including configuration and current state
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: Update service status
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateStatusResponse'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+system-update-apply:
+  post:
+    tags:
+      - System
+    summary: Apply available update
+    description: Trigger an update to the latest available version (manual mode). Update can only be applied during the configured update window.
+    security:
+      - ApiKeyAuth: []
+    requestBody:
+      required: false
+      description: No body required - uses latest available version
+    responses:
+      '202':
+        description: Update job created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateApplyResponse'
+      '200':
+        description: Already on latest version
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+                current_version:
+                  type: string
+                latest_version:
+                  type: string
+      '400':
+        description: Outside update window or other validation error
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                update_window:
+                  type: object
+      '503':
+        description: Store unavailable
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+system-update-status-byJobId:
+  get:
+    tags:
+      - System
+    summary: Get update job status
+    description: Check the status of a specific update job by job ID
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: job_id
+        in: path
+        description: Update job ID
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Job status
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateJobStatus'
+      '404':
+        description: Job not found
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+settings-update:
+  get:
+    tags:
+      - System
+    summary: Get update settings
+    description: Retrieve current update configuration settings
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: Current update settings
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateSettings'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+  put:
+    tags:
+      - System
+    summary: Update update settings
+    description: Update configuration settings for the update service
+    security:
+      - ApiKeyAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/system.yaml#/UpdateSettingsRequest'
+    responses:
+      '200':
+        description: Settings updated successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/system.yaml#/UpdateSettingsResponse'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+

@@ -4,9 +4,13 @@ Simplified scanner-first enrichment on the `scanner-enrichment-lite` branch.
 
 Full hybrid architecture: see [REFERENCE.md](../REFERENCE.md) and branch `threat-enrich-agent`.
 
+End-to-end demo script: [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)  
+Deep dive (diagrams, module map, session integration): [SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)  
+Code review checklist: [CODE_REVIEW.md](./CODE_REVIEW.md)
+
 ## What this does
 
-- Tags known scanners from [known_scanner_inventory.csv](../config/scanners/known_scanner_inventory.csv) and feed snapshots under `config/scanners/feeds/`
+- Tags known scanners from the **Redis-backed scanner inventory** (compiled from CSV rows + feed snapshots; files are optional export)
 - Classifies each IP into **benign**, **malicious**, **suspicious**, or **unknown**
 - Attaches **investigation metadata** (behavior tags, frequency tier, priority) alongside the 4-category outcome
 - Runs a **cost-aware API cascade** (1st / 2nd / 3rd best after eval)
@@ -84,6 +88,8 @@ The 4-category `outcome_category` answers **hostility**. A sibling `investigatio
 | `priority` | `low` / `medium` / `high` / `critical` | Analyst attention level |
 | `events_in_batch` | `48` | Raw count for this IP in the current HTTP payload |
 | `events_today` | `48` | Total events for this IP today (ES history + current batch) |
+| `scanner_inventory_version` | `42` | Redis inventory generation used for `local_csv` classification |
+| `scanner_inventory_refreshed_at` | ISO timestamp | When that inventory generation was published |
 
 Frequency thresholds: `high` ≥ 10 events/IP **today**, `excessive` ≥ 30. Counts come from **`events_today`** — Elasticsearch docs already indexed for that IP today plus the current batch — not just the current HTTP payload. The batch-only count is still stored as `events_in_batch`.
 
@@ -108,6 +114,29 @@ curl 'http://127.0.0.1:8091/scanner-lite/sessions?q=priority:high%20src_ip:52.29
 ```
 
 Session query aliases for scanner-lite fields: `outcome`, `category`, `priority`, `behavior`, `scanner`, plus existing `severity`, `signal`, `verdict`, `src_ip`, `honeypot`.
+
+## Scanner inventory (Redis + Elasticsearch)
+
+Three tiers:
+
+| Tier | Role |
+|---|---|
+| **Redis** | Primary hot store — CSV rows, feed snapshots, compiled registry loaded once at API startup |
+| **Elasticsearch `scanner-inventory-*`** | Durable audit layer — one doc per classifiable CIDR, synced on every maintenance publish |
+| **Files** | Optional export (`--export-files` or `seed-scanner-redis.py` reverse) for git/CI review |
+
+Maintenance hub: `python -m threat_intel.scanner_inventory_maintenance` reads existing state from Redis, merges vendor feeds, publishes back to Redis, and syncs ES.
+
+```bash
+export SCANNER_INVENTORY_BACKEND=redis
+export REDIS_URL=redis://127.0.0.1:6379/0
+
+python scripts/seed-scanner-redis.py          # files → Redis → ES (first run)
+python -m threat_intel.scanner_inventory_maintenance   # refresh: Redis → merge → Redis + ES
+curl http://127.0.0.1:8091/scanner-lite/inventory/meta
+```
+
+Enrichment docs stamp `scanner_inventory_version` so session records in `stingar-enriched-*` correlate with the inventory generation that classified the IP.
 
 ## Quick start
 
@@ -162,6 +191,9 @@ Environment variables (shared with full STINGAR stack):
 | `STINGAR_CLIENT_ID` | `scanner-lite` | Client id passed to enrichment |
 | `STINGAR_SENSOR_ID` | — | Default sensor id when events omit it |
 | `STINGAR_WEBHOOK_SECRET` | — | If set, require `X-Webhook-Secret` header |
+| `SCANNER_INVENTORY_BACKEND` | `redis` when `REDIS_URL` set | `redis` or `file` |
+| `REDIS_URL` | `redis://127.0.0.1:6379/0` | Scanner inventory hot store |
+| `SCANNER_REDIS_PREFIX` | `scanner` | Redis key prefix |
 
 Native STINGAR fields (`srcIp`, `hpData`, `app`) are preserved so honeypot behavior tags and PeopleSoft probes classify correctly.
 
@@ -183,7 +215,8 @@ Re-import anytime: `./scripts/import-scanner-lite-dashboards.sh` or `./scripts/d
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/health` | ES reachability |
+| GET | `/health` | ES reachability + Redis scanner cache stats |
+| GET | `/scanner-lite/inventory/meta` | Redis inventory meta + ES sync stats |
 | POST | `/scanner-lite/enrich/ip` | Single IP enrichment |
 | POST | `/scanner-lite/enrich/events` | Batch honeypot events |
 | POST | `/webhook/stingar` | STINGAR webhook (single or wrapped batch) |
@@ -207,5 +240,7 @@ Elasticsearch only (not SQLite). Indices:
 - `scanner-ip-enrichment-*` — per-event enrichment + `api_call_trace` + `investigation_metadata`
 - `scanner-ip-cache` — latest enrichment per source IP
 - `scanner-asn-batches-*` — daily ASN rollups
+- `scanner-inventory-*` — published scanner CIDR inventory (audit/Kibana; not the runtime lookup path)
+- `stingar-enriched-*` — session records with `hp_data.enrichment.scanner_lite.inventory_version`
 
 See [API-CASCADE.md](API-CASCADE.md) for endpoint evaluation details.

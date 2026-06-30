@@ -1,0 +1,115 @@
+tags:
+  get:
+    tags:
+      - tags
+    summary: Get tags
+    description: ""
+    parameters:
+      - name: tag_name
+        in: query
+        description: Name of Tag
+        required: false
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/tags.yaml#/components/schemas/Tag"
+  post:
+    tags:
+      - tags
+    summary: Create a new tag
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/tags.yaml#/components/schemas/TagSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/tags.yaml#/components/schemas/Tag"
+
+tags-byId:
+  get:
+    tags:
+      - tags
+    summary: Get tag by id
+    description: ""
+    operationId: getTagById
+    parameters:
+      - name: tagId
+        in: path
+        description: Id of tag to fetch
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/tags.yaml#/components/schemas/Tag"
+      "404":
+        description: tag not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - tags
+    summary: Delete tag by id
+    description: ""
+    operationId: deleteTagById
+    parameters:
+      - name: tagId
+        in: path
+        description: Id of tag to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/tags.yaml#/components/schemas/Tag"
+      "404":
+        description: tag not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

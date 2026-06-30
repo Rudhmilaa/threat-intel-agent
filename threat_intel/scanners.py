@@ -198,6 +198,37 @@ class ScannerRegistry:
         return cls(default_scanners, client_scanners, client_id, inventory_rows)
 
     @classmethod
+    def from_redis(
+        cls,
+        client_id: Optional[str] = None,
+        client_dir: Path = CLIENT_SCANNERS_DIR,
+    ) -> "ScannerRegistry":
+        from threat_intel.scanner_redis_store import get_scanner_redis_store
+
+        store = get_scanner_redis_store()
+        if not store.is_populated():
+            raise RuntimeError(
+                "Scanner Redis inventory is empty. Run scripts/seed-scanner-redis.py or "
+                "python -m threat_intel.scanner_inventory_maintenance first."
+            )
+
+        inventory_rows = store.load_csv_rows()
+        resolved_client = client_id or "scanner-lite"
+        default_scanners = store.load_compiled_registry(resolved_client)
+        if not default_scanners:
+            feed_rows = store.feed_snapshots_to_rows()
+            default_scanners = inventory_to_scanner_entries(inventory_rows, feed_rows)
+
+        client_scanners = []
+        if client_id:
+            client_path = client_dir / f"{client_id}_scanners.json"
+            if client_path.exists():
+                client_payload = json.loads(client_path.read_text(encoding="utf-8"))
+                client_scanners = client_payload.get("scanners", [])
+
+        return cls(default_scanners, client_scanners, client_id, inventory_rows)
+
+    @classmethod
     def from_files(
         cls,
         client_id: Optional[str] = None,
@@ -222,6 +253,13 @@ class ScannerRegistry:
 
     @classmethod
     def for_client(cls, client_id: Optional[str] = None) -> "ScannerRegistry":
+        from threat_intel.scanner_redis_store import scanner_inventory_backend
+
+        if scanner_inventory_backend() == "redis":
+            try:
+                return cls.from_redis(client_id=client_id)
+            except RuntimeError:
+                pass
         return cls.from_files(client_id=client_id)
 
     @staticmethod

@@ -43,6 +43,31 @@ def _taxonomy_tags(enriched: dict, meta: dict) -> list[str]:
     return sorted(set(tags))
 
 
+def build_outcome_summary(
+    enriched: dict,
+    meta: dict,
+    scanner_tag: Optional[dict],
+) -> dict[str, Any]:
+    """Compact hover/drilldown payload for Attack Analysis session rows."""
+    summary: dict[str, Any] = {
+        "confidence": enriched.get("outcome_confidence"),
+        "priority": meta.get("priority"),
+        "classification": meta.get("investigation_classification"),
+        "scanner_attribution": meta.get("scanner_attribution"),
+        "frequency_tier": meta.get("frequency_tier"),
+        "events_today": meta.get("events_today"),
+        "behavior_tags": list(meta.get("behavior_tags") or []),
+        "reasons": list(enriched.get("outcome_reasons") or []),
+    }
+    if scanner_tag:
+        summary["scanner_vendor"] = scanner_tag.get("vendor")
+        summary["scanner_id"] = scanner_tag.get("scanner_id")
+        summary["matched_cidr"] = scanner_tag.get("matched_cidr")
+    if meta.get("scanner_inventory_version") is not None:
+        summary["inventory_version"] = meta["scanner_inventory_version"]
+    return summary
+
+
 def to_stingar_session(
     enriched: dict,
     event: Optional[dict] = None,
@@ -92,9 +117,16 @@ def to_stingar_session(
         scanner_lite_block["scanner_id"] = scanner_tag.get("scanner_id")
         scanner_lite_block["matched_cidr"] = scanner_tag.get("matched_cidr")
 
+    if meta.get("scanner_inventory_version") is not None:
+        scanner_lite_block["inventory_version"] = meta["scanner_inventory_version"]
+    if meta.get("scanner_inventory_refreshed_at"):
+        scanner_lite_block["inventory_refreshed_at"] = meta["scanner_inventory_refreshed_at"]
+
     doc = {
         "@timestamp": enriched.get("@timestamp"),
         "src_ip": source_ip,
+        "outcome_category": outcome,
+        "outcome_summary": build_outcome_summary(enriched, meta, scanner_tag),
         "source": source,
         "destination": destination,
         "network": {

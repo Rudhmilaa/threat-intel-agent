@@ -1,0 +1,28 @@
+components:
+  schemas:
+    Tags:
+      type: array
+      items:
+        $ref: "tags.yaml#/components/schemas/Tag"
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        value:
+          type: string
+        description:
+          type: string
+
+    TagSubmission:
+      type: object
+      properties:
+        name:
+          type: string
+        value:
+          type: string
+        description:
+          type: string

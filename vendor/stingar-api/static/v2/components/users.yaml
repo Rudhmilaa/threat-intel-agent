@@ -1,0 +1,35 @@
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        token:
+          type: string
+        updated:
+          type: string
+        created:
+          type: string
+
+    AuthSubmission:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    UserSubmission:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string

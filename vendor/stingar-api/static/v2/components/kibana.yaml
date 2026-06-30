@@ -1,0 +1,11 @@
+components:
+  schemas:
+    KibanaDashboard:
+      type: object
+      properties:
+        "type":
+          type: string
+        "id":
+          type: string
+        "attributes":
+          type: object

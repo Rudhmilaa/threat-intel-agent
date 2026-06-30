@@ -1,0 +1,258 @@
+users:
+  get:
+    tags:
+      - users
+    summary: Get users
+    description: ""
+    parameters:
+      - name: username
+        in: query
+        description: Username of user
+        required: false
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/users.yaml#/components/schemas/User"
+  post:
+    tags:
+      - users
+    summary: Create user
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/users.yaml#/components/schemas/UserSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+users-byId:
+  get:
+    tags:
+      - users
+    summary: Get user by username
+    description: ""
+    operationId: getUserByUsername
+    parameters:
+      - name: userId
+        in: path
+        description: Id of user to return
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  put:
+    tags:
+      - users
+    summary: Update user
+    description: ""
+    parameters:
+      - name: userId
+        in: path
+        description: Id of User to update
+        required: true
+        schema:
+          type: string
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/users.yaml#/components/schemas/UserSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - users
+    summary: Delete user by id
+    description: ""
+    operationId: deleteUserById
+    parameters:
+      - name: userId
+        in: path
+        description: Id of user to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+users-byId-token:
+  get:
+    tags:
+      - users
+    summary: Get token by username
+    description: ""
+    operationId: getToken
+    parameters:
+      - name: userId
+        in: path
+        description: User id of token to retrieve
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            properties:
+              token:
+                type: string
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  put:
+    tags:
+      - users
+    summary: Update token by username
+    description: ""
+    operationId: updateToken
+    parameters:
+      - name: userId
+        in: path
+        description: User id of token to update
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+authenticate-user:
+  post:
+    tags:
+      - users
+    summary: Authenticate user
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/users.yaml#/components/schemas/AuthSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      200:
+        description: authentication successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/users.yaml#/components/schemas/User"
+      "401":
+        description: authentication failed
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

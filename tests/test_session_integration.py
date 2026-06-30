@@ -60,6 +60,42 @@ class TestSessionDocument(unittest.TestCase):
         self.assertEqual(sl["frequency_tier"], "excessive")
         self.assertIn("behavior:peoplesoft_probe", session["taxonomy"]["tags"])
 
+    def test_inventory_version_on_session_when_present(self):
+        doc = {
+            **ENRICHED_DOC,
+            "investigation_metadata": {
+                **ENRICHED_DOC["investigation_metadata"],
+                "scanner_inventory_version": 42,
+                "scanner_inventory_refreshed_at": "2026-06-22T10:00:00+00:00",
+            },
+        }
+        session = to_stingar_session(doc, PEOPLESOFT_EVENT)
+        sl = session["hp_data"]["enrichment"]["scanner_lite"]
+        self.assertEqual(sl["inventory_version"], 42)
+        self.assertEqual(sl["inventory_refreshed_at"], "2026-06-22T10:00:00+00:00")
+
+    def test_outcome_category_and_summary_on_session(self):
+        doc = {
+            **ENRICHED_DOC,
+            "outcome_category": "suspicious",
+            "scanner_tag": {
+                "vendor": "Censys",
+                "scanner_id": "censys",
+                "matched_cidr": "162.142.125.0/24",
+            },
+            "investigation_metadata": {
+                **ENRICHED_DOC["investigation_metadata"],
+                "scanner_inventory_version": 7,
+            },
+        }
+        session = to_stingar_session(doc, PEOPLESOFT_EVENT)
+        self.assertEqual(session["outcome_category"], "suspicious")
+        self.assertEqual(session["investigation"]["category"], "suspicious")
+        summary = session["outcome_summary"]
+        self.assertEqual(summary["priority"], "high")
+        self.assertIn("peoplesoft_probe", summary["behavior_tags"])
+        self.assertEqual(summary["inventory_version"], 7)
+
     def test_known_scanner_taxonomy_tag(self):
         doc = {
             **ENRICHED_DOC,

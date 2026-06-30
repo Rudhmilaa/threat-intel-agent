@@ -70,6 +70,27 @@ class ElasticsearchDocumentStore:
         enrichment.setdefault("effective_signals", prepared["effective_signals"])
         enrichment.setdefault("version", "enriched-1")
 
+        investigation = prepared.get("investigation") or {}
+        if not prepared.get("outcome_category"):
+            prepared["outcome_category"] = investigation.get("category", "unknown")
+
+        if not prepared.get("outcome_summary"):
+            scanner_lite = enrichment.get("scanner_lite") or {}
+            prepared["outcome_summary"] = {
+                "confidence": scanner_lite.get("outcome_confidence"),
+                "priority": investigation.get("priority"),
+                "classification": investigation.get("classification"),
+                "scanner_vendor": scanner_lite.get("scanner_vendor"),
+                "scanner_id": scanner_lite.get("scanner_id"),
+                "matched_cidr": scanner_lite.get("matched_cidr"),
+                "scanner_attribution": scanner_lite.get("scanner_attribution"),
+                "frequency_tier": scanner_lite.get("frequency_tier"),
+                "events_today": scanner_lite.get("events_today"),
+                "behavior_tags": list(scanner_lite.get("behavior_tags") or []),
+                "reasons": list(investigation.get("reasons") or []),
+                "inventory_version": scanner_lite.get("inventory_version"),
+            }
+
         return prepared
 
     def index_documents(self, documents: list[dict]) -> dict[str, Any]:
@@ -121,13 +142,16 @@ class ElasticsearchDocumentStore:
                     "id": hit.get("_id"),
                     "index": hit.get("_index"),
                     "timestamp": source.get("@timestamp"),
+                    "session_id": source.get("session_id") or source.get("stingar", {}).get("session_id"),
                     "src_ip": source.get("src_ip") or source.get("source", {}).get("ip"),
+                    "outcome_category": source.get("outcome_category")
+                    or source.get("investigation", {}).get("category"),
+                    "outcome_summary": source.get("outcome_summary"),
                     "severity": source.get("effective_severity"),
                     "signals": source.get("effective_signals", []),
                     "honeypot_type": source.get("stingar", {}).get("honeypot_type"),
                     "attack_type": source.get("stingar", {}).get("attack_type"),
                     "classification": source.get("investigation", {}).get("classification"),
-                    "outcome_category": source.get("investigation", {}).get("category"),
                     "priority": source.get("investigation", {}).get("priority"),
                     "scanner_vendor": scanner_lite.get("scanner_vendor"),
                     "events_today": scanner_lite.get("events_today"),

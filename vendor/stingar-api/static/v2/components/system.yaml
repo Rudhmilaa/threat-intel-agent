@@ -1,0 +1,265 @@
+SystemVersion:
+  type: object
+  properties:
+    version:
+      type: string
+      description: Current installed version
+      example: "v2.2.1"
+    version_state_file:
+      type: string
+      description: Path to version state file
+    compose_file:
+      type: string
+      description: Docker compose file path
+    installed_date:
+      type: string
+      format: date-time
+      description: Date when version was installed
+    last_check:
+      type: string
+      format: date-time
+      description: Last time version was checked
+    images_pulled:
+      type: boolean
+      description: Whether images have been pulled for this version
+    images_pulled_date:
+      type: string
+      format: date-time
+      description: Date when images were pulled
+
+UpdateCheckResponse:
+  type: object
+  properties:
+    current_version:
+      type: string
+      description: Currently installed version
+      example: "v2.2.1"
+    latest_version:
+      type: string
+      description: Latest available version
+      example: "v2.3.0"
+    update_available:
+      type: boolean
+      description: Whether an update is available
+    within_update_window:
+      type: boolean
+      description: Whether current time is within update window
+    update_window:
+      type: object
+      properties:
+        start:
+          type: string
+          description: Update window start time (HH:MM format)
+          example: "00:00"
+        end:
+          type: string
+          description: Update window end time (HH:MM format)
+          example: "06:00"
+    latest_version_info:
+      type: object
+      description: Detailed information about latest version (only if update available)
+      nullable: true
+      properties:
+        version:
+          type: string
+        release_date:
+          type: string
+          format: date-time
+        docker_images:
+          type: object
+          additionalProperties:
+            type: string
+        mandatory:
+          type: boolean
+        breaking_changes:
+          type: boolean
+        changelog:
+          type: string
+          format: uri
+        release_notes:
+          type: string
+          description: Markdown content of release notes (inline)
+        release_notes_url:
+          type: string
+          format: uri
+          description: URL to fetch release notes (alternative to inline)
+
+UpdateStatusResponse:
+  type: object
+  properties:
+    service_enabled:
+      type: boolean
+      description: Whether update service is enabled
+    remote_store_enabled:
+      type: boolean
+      description: Whether remote store is enabled
+    current_version:
+      type: string
+      description: Currently installed version
+    latest_version:
+      type: string
+      nullable: true
+      description: Latest available version
+    update_available:
+      type: boolean
+      description: Whether an update is available
+    latest_version_info:
+      type: object
+      nullable: true
+      description: Full version info from store when update available (includes release_notes)
+      properties:
+        version:
+          type: string
+        release_notes:
+          type: string
+        release_notes_url:
+          type: string
+          format: uri
+        changelog:
+          type: string
+          format: uri
+        docker_images:
+          type: object
+    check_interval:
+      type: integer
+      description: Update check interval in seconds
+      example: 10800
+    update_window:
+      type: object
+      properties:
+        start:
+          type: string
+          description: Update window start time
+        end:
+          type: string
+          description: Update window end time
+        within_window:
+          type: boolean
+          description: Whether current time is within update window
+    compose_file:
+      type: string
+      description: Docker compose file path
+    version_state_file:
+      type: string
+      description: Version state file path
+
+UpdateApplyRequest:
+  type: object
+  description: Request to apply an update (no body required, uses latest available version)
+
+UpdateApplyResponse:
+  type: object
+  properties:
+    job_id:
+      type: string
+      format: uuid
+      description: Job ID for tracking update progress
+    message:
+      type: string
+      description: Status message
+    current_version:
+      type: string
+      description: Current version before update
+    target_version:
+      type: string
+      description: Target version for update
+
+UpdateJobStatus:
+  type: object
+  properties:
+    job_id:
+      type: string
+      format: uuid
+      description: Job ID
+    status:
+      type: string
+      enum: [pending, in-progress, completed, failed]
+      description: Job status
+    current_version:
+      type: string
+      description: Current version
+    target_version:
+      type: string
+      description: Target version
+    created_at:
+      type: string
+      format: date-time
+      description: Job creation timestamp
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp
+    error:
+      type: string
+      nullable: true
+      description: Error message if job failed
+
+UpdateSettings:
+  type: object
+  properties:
+    update_mode:
+      type: string
+      enum: [manual, auto]
+      description: Update mode (manual requires user approval, auto applies automatically)
+      example: "manual"
+    update_window_start:
+      type: string
+      description: Update window start time (HH:MM format)
+      example: "00:00"
+    update_window_end:
+      type: string
+      description: Update window end time (HH:MM format)
+      example: "06:00"
+    check_interval:
+      type: integer
+      description: Update check interval in seconds
+      example: 10800
+    service_enabled:
+      type: boolean
+      description: Whether update service is enabled
+    compose_file:
+      type: string
+      description: Docker compose file path
+    cleanup_old_images:
+      type: boolean
+      description: Whether to cleanup old Docker images
+    cleanup_after_hours:
+      type: integer
+      description: Hours after which to cleanup old images
+      example: 24
+
+UpdateSettingsRequest:
+  type: object
+  properties:
+    update_mode:
+      type: string
+      enum: [manual, auto]
+      description: Update mode
+    update_window_start:
+      type: string
+      description: Update window start time (HH:MM format)
+    update_window_end:
+      type: string
+      description: Update window end time (HH:MM format)
+    check_interval:
+      type: integer
+      description: Update check interval in seconds
+    service_enabled:
+      type: boolean
+      description: Whether update service is enabled
+    cleanup_old_images:
+      type: boolean
+      description: Whether to cleanup old Docker images
+    cleanup_after_hours:
+      type: integer
+      description: Hours after which to cleanup old images
+
+UpdateSettingsResponse:
+  type: object
+  properties:
+    message:
+      type: string
+      description: Success message
+    settings:
+      $ref: '#/UpdateSettings'
+

@@ -25,6 +25,7 @@ FIELD_ALIASES = {
     "sensor": "stingar.sensor_id",
     "verdict": "investigation.classification",
     "outcome": "investigation.category",
+    "outcome_category": "outcome_category",
     "category": "investigation.category",
     "priority": "investigation.priority",
     "behavior": "hp_data.enrichment.scanner_lite.behavior_tags",

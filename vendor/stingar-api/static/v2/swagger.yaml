@@ -1,0 +1,186 @@
+openapi: "3.0.1"
+
+
+info:
+  description: This is the API documentation for STINGARv2. You can find out more about STINGARv2 at [https://forewarned.io](http://forewarned.io).
+  version: 2.2.0
+  title: STINGAR v2
+  contact:
+    email: info@forewarned.io
+  license:
+    name: LGPL 2.1
+    url: https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html
+
+
+servers:
+  - url: /api/v2
+
+
+paths:
+  /sessions:
+    $ref: 'definitions/sessions.yaml#/sessions'
+  /sessions/{sessionId}:
+    $ref: 'definitions/sessions.yaml#/sessions-byId'
+  /sessions/{sensorId}:
+    $ref: 'definitions/sessions.yaml#/sessions-bySensor'
+
+
+  /indicators:
+    $ref: 'definitions/indicators.yaml#/indicators'
+
+  /ids-rules/export:
+    $ref: 'definitions/ids_rules.yaml#/ids-rules-export'
+  /ids-rules/feed:
+    $ref: 'definitions/ids_rules.yaml#/ids-rules-feed'
+  /ids-rules/status:
+    $ref: 'definitions/ids_rules.yaml#/ids-rules-status'
+  /ids-rules/preview:
+    $ref: 'definitions/ids_rules.yaml#/ids-rules-preview'
+  /ids-rules:
+    $ref: 'definitions/ids_rules.yaml#/ids-rules'
+
+  /sensors:
+    $ref: 'definitions/sensors.yaml#/sensors'
+  /sensors/{sensorId}:
+    $ref: 'definitions/sensors.yaml#/sensors-byId'
+  /sensors/stop/{sensorId}:
+    $ref: 'definitions/sensors.yaml#/sensors-stop'
+  /sensors/start/{sensorId}:
+    $ref: 'definitions/sensors.yaml#/sensors-start'
+  /sensors/restart/{sensorId}:
+    $ref: 'definitions/sensors.yaml#/sensors-restart'
+
+  /users:
+    $ref: 'definitions/users.yaml#/users'
+  /users/{userId}:
+    $ref: 'definitions/users.yaml#/users-byId'
+  /users/{userId}/token:
+    $ref: 'definitions/users.yaml#/users-byId-token'
+  /authenticate_user:
+    $ref: 'definitions/users.yaml#/authenticate-user'
+
+  /deployments:
+    $ref: 'definitions/deployments.yaml#/deployments'
+  /deployments/compose:
+    $ref: 'definitions/deployments.yaml#/deployments-compose'
+  /deployments/env:
+    $ref: 'definitions/deployments.yaml#/deployments-env'
+  /deployments/{deploymentId}:
+    $ref: 'definitions/deployments.yaml#/deployments-byId'
+  /deployments/{deploymentId}/compose:
+    $ref: 'definitions/deployments.yaml#/deployments-byId-compose'
+  /deployments/{deploymentId}/env:
+    $ref: 'definitions/deployments.yaml#/deployments-byId-env'
+  /deployments/{deploymentId}/status:
+    $ref: 'definitions/deployments.yaml#/deployments-byId-status'
+  /deploy:
+    $ref: 'definitions/deployments.yaml#/deploy'
+
+  /deploymentlogs:
+    $ref: 'definitions/ansible.yaml#/deploymentlogs'
+
+  /tags:
+    $ref: 'definitions/tags.yaml#/tags'
+  /tags/{tagId}:
+    $ref: 'definitions/tags.yaml#/tags-byId'
+
+  /configs:
+    $ref: 'definitions/configs.yaml#/configs'
+  /configs/{configId}:
+    $ref: 'definitions/configs.yaml#/configs-byId'
+
+  /authkeys:
+    $ref: 'definitions/authkeys.yaml#/authkeys'
+  /authkeys/{authKeyId}:
+    $ref: 'definitions/authkeys.yaml#/authkeys-byId'
+
+  /hosts:
+    $ref: 'definitions/hosts.yaml#/hosts'
+  /hosts/{hostId}:
+    $ref: 'definitions/hosts.yaml#/hosts-byId'
+
+  /kibana/objects:
+    $ref: 'definitions/kibana.yaml#/kibana-objects'
+  /kibana/saved_objects:
+    $ref: 'definitions/kibana.yaml#/kibana-saved-objects'
+  /kibana/saved_objects/{objectId}:
+    $ref: 'definitions/kibana.yaml#/kibana-saved-objects-byId'
+  /kibana/load:
+    $ref: 'definitions/kibana.yaml#/kibana-load'
+  /kibana/load/{objectId}:
+    $ref: 'definitions/kibana.yaml#/kibana-load-byId'
+  /kibana/save:
+    $ref: 'definitions/kibana.yaml#/kibana-save'
+
+  /store/honeypots:
+    $ref: 'definitions/store.yaml#/store-honeypots'
+  /store/honeypots/count:
+    get:
+      tags:
+        - Store
+      summary: Get count of available honeypots from remote store
+      description: Retrieve the count of available honeypots from the remote store with local cache fallback
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Count of available honeypots
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                        description: Number of available honeypots
+                    required:
+                      - count
+                  source:
+                    type: string
+                    enum: [remote, cache]
+                    description: Source of the count data (remote store or local cache)
+                required:
+                  - data
+                  - source
+        '503':
+          $ref: 'components/errors.yaml#/components/schemas/ServiceUnavailable'
+        '500':
+          $ref: 'components/errors.yaml#/components/schemas/InternalServerError'
+  /store/honeypots/{ident}:
+    $ref: 'definitions/store.yaml#/store-honeypots-byId'
+  /store/search:
+    $ref: 'definitions/store.yaml#/store-search'
+  /store/categories:
+    $ref: 'definitions/store.yaml#/store-categories'
+  /store/installed:
+    $ref: 'definitions/store.yaml#/store-installed'
+  /store/installed/{ident}:
+    $ref: 'definitions/store.yaml#/store-installed-byId'
+
+  /system/version:
+    $ref: 'definitions/system.yaml#/system-version'
+  /system/update-check:
+    $ref: 'definitions/system.yaml#/system-update-check'
+  /system/update-status:
+    $ref: 'definitions/system.yaml#/system-update-status'
+  /system/update/apply:
+    $ref: 'definitions/system.yaml#/system-update-apply'
+  /system/update/status/{job_id}:
+    $ref: 'definitions/system.yaml#/system-update-status-byJobId'
+  /settings/update:
+    $ref: 'definitions/system.yaml#/settings-update'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: api-key
+
+
+externalDocs:
+  description: Find out more about STINGARv2
+  url: https://forewarned.io

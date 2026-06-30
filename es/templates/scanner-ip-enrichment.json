@@ -23,7 +23,9 @@
             "frequency_tier": { "type": "keyword" },
             "priority": { "type": "keyword" },
             "events_in_batch": { "type": "integer" },
-            "events_today": { "type": "integer" }
+            "events_today": { "type": "integer" },
+            "scanner_inventory_version": { "type": "integer" },
+            "scanner_inventory_refreshed_at": { "type": "date" }
           }
         },
         "attack_type": { "type": "keyword" },

@@ -1,0 +1,7 @@
+cluster.name: scanner-lite-demo
+network.host: 127.0.0.1
+http.port: 9200
+discovery.type: single-node
+xpack.security.enabled: false
+xpack.ml.enabled: false
+action.destructive_requires_name: true

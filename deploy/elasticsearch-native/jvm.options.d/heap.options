@@ -1,0 +1,3 @@
+# Low-memory settings for demo laptops (use when disk/RAM is tight).
+-Xms256m
+-Xmx512m

@@ -11,8 +11,12 @@ from pydantic import BaseModel, Field
 
 from scanner_lite.enrich import enrich_events, enrich_ip
 from scanner_lite.eval.overlap import RANKING_PATH, run_overlap_eval
+from scanner_lite.fluentd_normalize import normalize_fluentd_payload
 from scanner_lite.stingar_ingest import process_stingar_payload
 from scanner_lite.storage.es_store import ScannerLiteStore
+from scanner_lite.storage.inventory_es_store import ScannerInventoryEsStore
+from threat_intel.scanners import ScannerRegistry, configure_scanners, get_active_registry
+from threat_intel.scanner_redis_store import get_scanner_redis_store, scanner_inventory_backend
 
 load_dotenv()
 
@@ -66,15 +70,59 @@ def startup() -> None:
     if store.ping():
         store.ensure_templates()
 
+    client_id = _scanner_lite_client_id()
+    if scanner_inventory_backend() == "redis":
+        redis_store = get_scanner_redis_store()
+        if not redis_store.is_populated():
+            redis_store.publish_from_files()
+        configure_scanners(ScannerRegistry.from_redis(client_id))
+    else:
+        configure_scanners(ScannerRegistry.for_client(client_id))
+
 
 @app.get("/health")
 def health() -> dict[str, Any]:
     store = _store()
-    return {
+    payload: dict[str, Any] = {
         "status": "ok",
         "service": "scanner-enrichment-lite",
         "storage": "elasticsearch",
         **store.stats(),
+    }
+    if scanner_inventory_backend() == "redis":
+        redis_store = get_scanner_redis_store()
+        scanner_stats = redis_store.stats()
+        payload["scanner_cache"] = scanner_stats
+        payload["scanner_inventory_backend"] = "redis"
+        if not scanner_stats.get("populated"):
+            payload["status"] = "degraded"
+            payload["scanner_cache_warning"] = (
+                "Redis scanner inventory is empty; run scripts/seed-scanner-redis.py"
+            )
+        try:
+            payload["scanner_inventory_es"] = ScannerInventoryEsStore().stats()
+        except Exception as error:
+            payload["scanner_inventory_es"] = {"error": str(error)}
+    else:
+        payload["scanner_inventory_backend"] = "file"
+    return payload
+
+
+@app.get("/scanner-lite/inventory/meta")
+def inventory_meta() -> dict[str, Any]:
+    """Redis inventory meta plus Elasticsearch sync stats for audit/demo."""
+    if scanner_inventory_backend() != "redis":
+        raise HTTPException(status_code=404, detail="Scanner inventory backend is not Redis.")
+    redis_store = get_scanner_redis_store()
+    if not redis_store.is_populated():
+        raise HTTPException(status_code=503, detail="Scanner Redis inventory is not populated.")
+    meta = redis_store.load_meta()
+    es_stats = ScannerInventoryEsStore().stats()
+    return {
+        "meta": meta,
+        "redis": redis_store.stats(),
+        "elasticsearch": es_stats,
+        "registry_range_count": len(get_active_registry().scanner_table()),
     }
 
 
@@ -144,6 +192,19 @@ def run_eval() -> dict:
         raise HTTPException(status_code=502, detail=str(error)) from error
 
 
+def _stingar_ingest_response(result: dict) -> dict:
+    return {
+        "status": result["status"],
+        "service": result["service"],
+        "received_events": result["received_events"],
+        "enriched_count": result["enriched_count"],
+        "category_counts": result["category_counts"],
+        "total_api_calls": result["total_api_calls"],
+        "es_stats": result["es_stats"],
+        "session_es_stats": result.get("session_es_stats"),
+    }
+
+
 @app.post("/webhook/stingar", dependencies=[Depends(require_webhook_secret)])
 async def receive_stingar_webhook(request: Request) -> dict:
     payload = await request.json()
@@ -159,21 +220,31 @@ async def receive_stingar_webhook(request: Request) -> dict:
     except Exception as error:
         raise HTTPException(status_code=502, detail=f"Enrichment failed: {error}") from error
 
-    return {
-        "status": result["status"],
-        "service": result["service"],
-        "received_events": result["received_events"],
-        "enriched_count": result["enriched_count"],
-        "category_counts": result["category_counts"],
-        "total_api_calls": result["total_api_calls"],
-        "es_stats": result["es_stats"],
-        "session_es_stats": result.get("session_es_stats"),
-    }
+    return _stingar_ingest_response(result)
 
 
 @app.post("/webhook/stingar/batch", dependencies=[Depends(require_webhook_secret)])
 async def receive_stingar_batch(request: Request) -> dict:
     return await receive_stingar_webhook(request)
+
+
+@app.post("/ingest/fluentd")
+async def receive_fluentd_ingest(request: Request) -> dict:
+    """Accept Fluentd out_http JSON records and enrich into stingar-* session indices."""
+    payload = await request.json()
+    normalized = normalize_fluentd_payload(payload)
+    try:
+        result = process_stingar_payload(
+            normalized,
+            client_id=_scanner_lite_client_id(),
+            sensor_id=_scanner_lite_sensor_id(),
+            store=_store(),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(status_code=502, detail=f"Enrichment failed: {error}") from error
+    return _stingar_ingest_response(result)
 
 
 def main() -> None:

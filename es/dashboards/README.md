@@ -29,9 +29,18 @@ Recommended filters on `scanner-ip-enrichment-*`:
 
 ## Full STINGAR stack (hybrid)
 
-1. **Attack Analysis** — Data table on `stingar-enriched-*`, columns: `@timestamp`, `effective_severity`, `src_ip`, `effective_signals`, `stingar.honeypot_type`, `investigation.classification`
-2. **Severity over time** — Lens area chart, split by `effective_severity`
+1. **Attack Analysis** — Data table on `stingar-*`, columns: `@timestamp`, `outcome_category`, `src_ip`, `outcome_summary.scanner_vendor`, `stingar.honeypot_type`, `investigation.classification`
+2. **Severity over time** — Lens area chart, split by `outcome_category` (preferred) or legacy `effective_severity`
 3. **Scanner noise** — filter `investigation.classification: known_scanner_high_noise`
+
+Pre-built Attack Analysis dashboard: [stingar/attack-analysis.ndjson](stingar/attack-analysis.ndjson)
+
+```bash
+./scripts/import-stingar-dashboards.sh
+# Open: http://127.0.0.1:5601/app/dashboards#/view/stingar-attack-analysis-dashboard
+```
+
+See [docs/STINGAR-INTEGRATION.md](../docs/STINGAR-INTEGRATION.md) for STINGAR v2.3 compose + Fluentd wiring.
 
 ## Session query API
 

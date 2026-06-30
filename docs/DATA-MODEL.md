@@ -255,7 +255,7 @@ This repo does **not** define or write:
 
 - `payloads`, `infra`, `playbooks`, `edges` object indices
 - `observations-*` append streams
-- `intel-feeds` index (scanner data lives in CSV + JSON snapshots instead)
+- `intel-feeds` index (scanner inventory uses Redis hot store + `scanner-inventory-*` ES audit index instead)
 - `hp_data.enrichment.c2` / payload stamping (future message-cube ingest path)
 
 ## Related docs

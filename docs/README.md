@@ -4,6 +4,16 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 ## Reading order (new teammates)
 
+### Scanner enrichment lite (`scanner-enrichment-lite` branch)
+
+1. **[SCANNER-LITE.md](./SCANNER-LITE.md)** — quick start, API, demo IPs
+2. **[SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)** — end-to-end demo script (curl, session integration, Kibana)
+3. **[SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)** — system design, module map, mermaid diagrams
+4. **[CODE_REVIEW.md](./CODE_REVIEW.md)** — reviewer checklist and verification script
+5. **[API-CASCADE.md](./API-CASCADE.md)** — endpoint eval, ranking, cost model
+
+### Full hybrid platform (`threat-enrich-agent` branch)
+
 1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** — where components run, data flows, trust boundaries
 2. **[ENRICHMENT.md](./ENRICHMENT.md)** — how scoring, classification, and clustering work
 3. **[DATA-MODEL.md](./DATA-MODEL.md)** — Elasticsearch indices, document schema, query language
@@ -17,7 +27,12 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 | Document | Covers |
 |---|---|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, deployment topologies, module map |
+| [SCANNER-LITE.md](./SCANNER-LITE.md) | Quick start, API, demo, session integration |
+| [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md) | Full end-to-end demo walkthrough and copy-paste script |
+| [SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md) | Scanner-lite system design (mermaid diagrams) |
+| [CODE_REVIEW.md](./CODE_REVIEW.md) | Reviewer checklist, test map, demo verification |
+| [API-CASCADE.md](./API-CASCADE.md) | 8 endpoints, overlap eval, cascade ranking |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Full hybrid system design, deployment topologies |
 | [ENRICHMENT.md](./ENRICHMENT.md) | Pipeline stages, severity vs investigation, scanner Tier-0 |
 | [DATA-MODEL.md](./DATA-MODEL.md) | ES indices, enriched documents, config file layout |
 | [POLICY-AND-SHARING.md](./POLICY-AND-SHARING.md) | Safelist, sharing policy, sync rules, LLM gate |
@@ -30,10 +45,11 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 | Document | Audience |
 |---|---|
-| [CODE_REVIEW.md](./CODE_REVIEW.md) | Internal engineering review; includes c2-engine comparison |
+| [CODE_REVIEW.md](./CODE_REVIEW.md) | Scanner-lite branch review checklist |
+| [SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md) | Scanner-lite architecture deep dive |
 | [C2_ENGINE_INTEGRATION.md](./C2_ENGINE_INTEGRATION.md) | Porting modules into c2-engine inline engine |
 
-For a standalone view of this repo, start with **ARCHITECTURE.md** — not CODE_REVIEW.md.
+For scanner-lite on this branch, start with **SCANNER-LITE.md** then **SCANNER-LITE-ARCHITECTURE.md**. For the full hybrid platform, start with **ARCHITECTURE.md**.
 
 ## Quick links
 

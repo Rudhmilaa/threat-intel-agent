@@ -1,0 +1,68 @@
+deploymentlogs:
+  get:
+    tags:
+      - deployments
+    summary: Get ansible logs for deployment
+    description: ""
+    operationId: getAnsibleLogs
+    parameters:
+      - in: query
+        name: from_date
+        description: Return ansible logs after this date
+        schema:
+          type: string
+          format: date-time
+        required: false
+      - in: query
+        name: to_date
+        description: Return ansible logs before this date
+        schema:
+          type: string
+          format: date-time
+        required: false
+      - in: query
+        name: limit
+        description: Maximum number of ansible logs to return
+        schema:
+          type: integer
+          format: int32
+          default: "10"
+        required: false
+      - in: query
+        name: host
+        description: Hostname / IP address of Ansible playbook
+        schema:
+          type: string
+        required: false
+      - in: query
+        name: deployment_uuid
+        description: Show ansible logs for specific Deployment UUID
+        schema:
+          type: string
+        required: false
+      - in: query
+        name: deployment_id
+        description: Show ansible logs for specific Deployment ID
+        schema:
+          type: string
+        required: false
+      - in: query
+        name: event
+        description: Show ansible logs with specific event type
+        schema:
+          type: string
+        required: false
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/ansible.yaml#/components/schemas/AnsibleLog"

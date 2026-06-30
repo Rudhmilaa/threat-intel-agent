@@ -1,0 +1,8 @@
+{
+  "component": "stingar-api",
+  "image": "4warned/stingar-api:latest",
+  "tag": "latest",
+  "digest": "sha256:4543449fd4070cd2aaae84379c06f18b0dd28f9d6469365ea8c698739fa15cb6",
+  "extracted_at": "2026-06-30T18:49:51Z",
+  "method": "crane"
+}

@@ -1,0 +1,24 @@
+{
+  "index_patterns": ["scanner-inventory-*"],
+  "priority": 215,
+  "template": {
+    "settings": {
+      "number_of_shards": 1
+    },
+    "mappings": {
+      "dynamic": "strict",
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "inventory_version": { "type": "integer" },
+        "vendor": { "type": "keyword" },
+        "scanner_type": { "type": "keyword" },
+        "cidr": { "type": "keyword" },
+        "confidence": { "type": "keyword" },
+        "source_url": { "type": "keyword" },
+        "last_verified": { "type": "keyword" },
+        "source": { "type": "keyword" },
+        "feed_refreshed_at": { "type": "date" }
+      }
+    }
+  }
+}

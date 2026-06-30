@@ -16,6 +16,7 @@
         "@timestamp": { "type": "date" },
         "src_ip": { "type": "ip" },
         "session_id": { "type": "keyword" },
+        "outcome_category": { "type": "keyword" },
         "effective_severity": { "type": "keyword" },
         "effective_signals": { "type": "keyword" },
         "source": {
@@ -69,6 +70,22 @@
             "category": { "type": "keyword" },
             "priority": { "type": "keyword" },
             "reasons": { "type": "keyword" }
+          }
+        },
+        "outcome_summary": {
+          "properties": {
+            "confidence": { "type": "float" },
+            "priority": { "type": "keyword" },
+            "classification": { "type": "keyword" },
+            "scanner_vendor": { "type": "keyword" },
+            "scanner_id": { "type": "keyword" },
+            "matched_cidr": { "type": "keyword" },
+            "scanner_attribution": { "type": "keyword" },
+            "frequency_tier": { "type": "keyword" },
+            "events_today": { "type": "integer" },
+            "behavior_tags": { "type": "keyword" },
+            "reasons": { "type": "keyword" },
+            "inventory_version": { "type": "integer" }
           }
         },
         "campaign": {
@@ -131,7 +148,9 @@
                     "api_calls": { "type": "integer" },
                     "scanner_vendor": { "type": "keyword" },
                     "scanner_id": { "type": "keyword" },
-                    "matched_cidr": { "type": "keyword" }
+                    "matched_cidr": { "type": "keyword" },
+                    "inventory_version": { "type": "integer" },
+                    "inventory_refreshed_at": { "type": "date" }
                   }
                 }
               }

@@ -1,0 +1,181 @@
+hosts:
+  get:
+    tags:
+      - hosts
+    summary: Get hosts for deploying honeypots to
+    description: ""
+    operationId: getHosts
+    parameters:
+      - in: query
+        name: address
+        description: Address of hosts
+        schema:
+          type: string
+        required: false
+      - in: query
+        name: ssh_port
+        description: SSH port of host
+        schema:
+          type: integer
+          format: int32
+          default: "22"
+        required: false
+      - in: query
+        name: username
+        description: Username of host
+        schema:
+          type: string
+        required: false
+      - in: query
+        name: authkey_id
+        description: Id of authkey
+        schema:
+          type: integer
+          format: int32
+        required: false
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/hosts.yaml#/components/schemas/Host"
+  post:
+    tags:
+      - hosts
+    summary: Create host for deploying honeypots to
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/hosts.yaml#/components/schemas/HostSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/hosts.yaml#/components/schemas/Host"
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+hosts-byId:
+  get:
+    tags:
+      - hosts
+    summary: Get host by id
+    description: ""
+    operationId: getHostById
+    parameters:
+      - name: hostId
+        in: path
+        description: Id of host to fetch
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/hosts.yaml#/components/schemas/Host"
+      "404":
+        description: host not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  put:
+    tags:
+      - hosts
+    summary: Update host by host Id
+    description: ""
+    operationId: updateHOst
+    parameters:
+      - name: hostId
+        in: path
+        description: Id of Host to update
+        required: true
+        schema:
+          type: string
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/hosts.yaml#/components/schemas/HostSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/hosts.yaml#/components/schemas/Host"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - hosts
+    summary: Delete host by id
+    description: ""
+    operationId: deleteHostById
+    parameters:
+      - name: hostId
+        in: path
+        description: Id of host to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/hosts.yaml#/components/schemas/Host"
+      "404":
+        description: host not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

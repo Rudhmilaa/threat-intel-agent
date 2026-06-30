@@ -1,0 +1,173 @@
+components:
+  schemas:
+    CowrieHpOptions:
+      type: object
+      properties:
+        ssh_enabled:
+          type: boolean
+          example: true
+        ssh_port:
+          type: integer
+          example: 22
+        telnet_enabled:
+          type: boolean
+          example: true
+        telnet_port:
+          type: integer
+          example: 23
+
+    DionaeaHpOptions:
+      type: object
+      properties:
+        ftp_enabled:
+          type: boolean
+          example: true
+        ftp_port:
+          type: integer
+          example: 21
+        http_enabled:
+          type: boolean
+          example: true
+        http_port:
+          type: integer
+          example: 80
+        https_enabled:
+          type: boolean
+          example: true
+        https_port:
+          type: integer
+          example: 443
+        mqtt_enabled:
+          type: boolean
+          example: true
+        mqtt_port:
+          type: boolean
+          example: 1883
+        mssql_enabled:
+          type: boolean
+          example: true
+        mssql_port:
+          type: boolean
+          example: 1433
+        mysql_enabled:
+          type: boolean
+          example: true
+        mysql_port:
+          type: integer
+          example: 3306
+        pptp_enabled:
+          type: boolean
+          example: true
+        pptp_port:
+          type: integer
+          example: 1723
+        sip_enabled:
+          type: boolean
+          example: true
+        sip_port:
+          type: integer
+          example: 5060
+        smb_enabled:
+          type: boolean
+          example: true
+        smb_port:
+          type: integer
+          example: 445
+        tftp_enabled:
+          type: boolean
+          example: true
+        tftp_port:
+          type: integer
+          example: 69
+        upnp_enabled:
+          type: boolean
+          example: true
+        upnp_port:
+          type: integer
+          example: 1900
+
+    GlastopfHpOptions:
+      type: object
+      properties:
+        web_port:
+          type: integer
+          example: 80
+
+    ConpotHpOptions:
+      type: object
+      properties:
+        http_enabled:
+          type: boolean
+          example: true
+        http_port:
+          type: integer
+          example: 80
+        https_enabled:
+          type: boolean
+          example: true
+        https_port:
+          type: integer
+          example: 443
+        s7_enabled:
+          type: boolean
+          example: true
+        s7_port:
+          type: integer
+          example: 102
+        modbus_enabled:
+          type: boolean
+          example: true
+        modbus_port:
+          type: integer
+          example: 502
+        snmp_enabled:
+          type: boolean
+          example: true
+        snmp_port:
+          type: integer
+          example: 161
+        bacnet_enabled:
+          type: boolean
+          example: true
+        ipmi_enabled:
+          type: boolean
+        ftp_enabled:
+          type: boolean
+          example: true
+        ftp_port:
+          type: integer
+          example: 21
+        tftp_enabled:
+          type: boolean
+          example: true
+        tftp_port:
+          type: integer
+          example: 69
+        enip_enabled:
+          type: boolean
+        enip_port:
+          type: integer
+          example: 44818
+
+    AmunHpOptions:
+      type: object
+      properties:
+        smb_enabled:
+          type: boolean
+          example: true
+        smb_port:
+          type: integer
+          example: 445
+        rdp_enabled:
+          type: boolean
+          example: true
+        rdp_port:
+          type: integer
+          example: 3389
+
+    RDPhoneyHpOptions:
+      type: object
+      properties:
+        rdp_port:
+          type: integer
+          example: 3389

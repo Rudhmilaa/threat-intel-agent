@@ -7,6 +7,13 @@ class ScannerInventoryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         os.environ.setdefault("STINGAR_LOCAL_CACHE_PATH", tempfile.mktemp(suffix=".sqlite3"))
+        os.environ["SCANNER_INVENTORY_BACKEND"] = "file"
+
+    def setUp(self) -> None:
+        os.environ["SCANNER_INVENTORY_BACKEND"] = "file"
+        from threat_intel.scanners import ScannerRegistry, configure_scanners
+
+        configure_scanners(ScannerRegistry.for_client())
 
     def test_classify_cortex_xpanse_from_inventory(self):
         from threat_intel.scanners import ScannerRegistry, classify_known_scanner
@@ -37,7 +44,7 @@ class ScannerInventoryTests(unittest.TestCase):
         self.assertIn("Rapid7 Project Sonar", vendors)
         self.assertIn("Palo Alto Networks Cortex Xpanse", vendors)
         self.assertGreater(inventory["classifiable_range_count"], 0)
-        self.assertIn("Shodan", inventory["pending_or_dynamic_vendors"])
+        self.assertIn("FOFA", inventory["pending_or_dynamic_vendors"])
 
     def test_longest_prefix_wins(self):
         from threat_intel.scanners import ScannerRegistry

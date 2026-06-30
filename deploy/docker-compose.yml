@@ -33,5 +33,16 @@ services:
       timeout: 10s
       retries: 30
 
+  redis:
+    image: redis:7
+    container_name: stingar-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
 volumes:
   stingar-es-data:

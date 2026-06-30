@@ -1,0 +1,337 @@
+deployments:
+  get:
+    tags:
+      - deployments
+    summary: Get deployments
+    description: ""
+    parameters:
+      - name: uuid
+        in: query
+        description: UUID of deployment
+        required: false
+        schema:
+          type: string
+      - name: status
+        in: query
+        description: Status of deployment
+        required: false
+        schema:
+          type: integer
+      - name: address
+        in: query
+        description: Address of host for deployment
+        required: false
+        schema:
+          type: string
+      - name: ssh_port
+        in: query
+        description: SSH port of host for deployment
+        schema:
+          type: integer
+      - name: username
+        in: query
+        description: Username of host for deployment
+        schema:
+          type: string
+      - name: authkey_id
+        in: query
+        description: SSH authkey id to use for deployment
+        schema:
+          type: string
+      - name: hp_type
+        in: query
+        description: Honeypot type for deployment
+        schema:
+          type: string
+      - name: limit
+        in: query
+        description: Maximum number of deployment records to return
+        schema:
+          type: integer
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/deployments.yaml#/components/schemas/Deployment"
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  post:
+    tags:
+      - deployments
+    summary: Deploy a new honeypot with given configuration options
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/deployments.yaml#/components/schemas/DeploymentSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/deployments.yaml#/components/schemas/Deployment"
+
+deployments-compose:
+  post:
+    tags:
+      - deployments
+    summary: Get docker-compose.yml file for deployment
+    description: Returns the content of a docker-compose.yml file for deployment POST data
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/deployments.yaml#/components/schemas/DeploymentSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          text/plain:
+            schema:
+              type: string
+
+deployments-env:
+  post:
+    tags:
+      - deployments
+    summary: Get ENV file for deployment
+    description: Returns the content of a ENV file for deployment POST data
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/deployments.yaml#/components/schemas/DeploymentSubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          text/plain:
+            schema:
+              type: string
+
+deployments-byId:
+  get:
+    tags:
+      - deployments
+    summary: Get deployment by id
+    descrption: ""
+    operationId: getDeploymentById
+    parameters:
+      - name: deploymentId
+        in: path
+        description: Id of deployment to fetch
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/deployments.yaml#/components/schemas/Deployment"
+      "404":
+        description: deployment not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - deployments
+    summary: Delete deployment by id
+    description: ""
+    operationId: deleteDeploymentById
+    parameters:
+      - name: deploymentId
+        in: path
+        description: Id of deployment to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/deployments.yaml#/components/schemas/Deployment"
+      "404":
+        description: deployment not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+deployments-byId-compose:
+  get:
+    tags:
+      - deployments
+    summary: Get docker-compose.yml file for deployment by id
+    description: Returns the content of a docker-compose.yml file for a given deployment
+    operationId: getDeploymentCompose
+    parameters:
+      - name: deploymentId
+        in: path
+        description: Id of deployment to build docker-compose.yml file for
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          text/plain:
+            schema:
+              type: string
+
+deployments-byId-env:
+  get:
+    tags:
+      - deployments
+    summary: Get ENV file for deployment by id
+    description: Returns the content of an ENV file for a given deployment
+    operationId: getDeploymentENV
+    parameters:
+      - name: deploymentId
+        in: path
+        description: Id of deployment to build ENV file for
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          text/plain:
+            schema:
+              type: string
+
+deployments-byId-status:
+  post:
+    tags:
+      - deployments
+    summary: Update deployment status by id
+    description: "status: -1 for deployment failed\n\nstatus: 0 for not deployed\n\nstatus: 1 for deploying\n\nstatus: 2 for successfully deployed"
+    operationId: updateDeploymentStatus
+    parameters:
+      - name: deploymentId
+        in: path
+        description: Id of deployment to update
+        required: true
+        schema:
+          type: string
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/deployments.yaml#/components/schemas/Deployment"
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+      "404":
+        description: deployment not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+deploy:
+  post:
+    tags:
+      - deployments
+    summary: Push deployment to Ansible
+    operationId: pushDeployment
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    deployment_id:
+                      type: string
+                    status:
+                      type: string
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+      "404":
+        description: deployment not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

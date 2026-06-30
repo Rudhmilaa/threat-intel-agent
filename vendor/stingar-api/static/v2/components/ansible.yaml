@@ -1,0 +1,18 @@
+components:
+  schemas:
+    AnsibleLog:
+      type: object
+      properties:
+        ts:
+          type: string
+          format: date-time
+        host:
+          type: string
+        deployment_id:
+          type: string
+        event:
+          type: string
+        msg:
+          type: string
+        error_msg:
+          type: string

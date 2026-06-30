@@ -1,0 +1,42 @@
+components:
+  schemas:
+    Session:
+      type: object
+      properties:
+        id:
+          type: string
+        sensor:
+          type: object
+          properties:
+            hostname:
+              type: string
+            asn:
+              type: string
+            uuid:
+              type: string
+            tags:
+              $ref: "tags.yaml#/components/schemas/Tags"
+        app:
+          type: string
+        hp_data:
+          type: object
+        src_port:
+          type: integer
+        protocol:
+          type: string
+        src_ip:
+          type: string
+        end_time:
+          type: string
+          format: date-time
+        dst_ip:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+        dst_port:
+          type: integer
+        "@timestamp":
+          type: integer
+        fluentd_tag:
+          type: string

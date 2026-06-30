@@ -14,11 +14,13 @@ from typing import Callable, Optional
 import requests
 
 from threat_intel.scanners import (
+    CLIENT_SCANNERS_DIR,
     DEFAULT_SCANNER_INVENTORY_PATH,
     INVENTORY_COLUMNS,
     SCANNER_FEED_SNAPSHOT_DIR,
     ScannerRegistry,
     configure_scanners,
+    inventory_to_scanner_entries,
     load_scanner_inventory,
 )
 
@@ -98,7 +100,7 @@ class MaintenanceReport:
     errors: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {
+        payload = {
             "inventory_path": self.inventory_path,
             "refreshed_at": self.refreshed_at,
             "last_verified": self.last_verified,
@@ -118,6 +120,15 @@ class MaintenanceReport:
             "pending_checks": self.pending_checks,
             "errors": self.errors,
         }
+        if self.summary.get("inventory_backend") is not None:
+            payload["inventory_backend"] = self.summary["inventory_backend"]
+        if self.summary.get("inventory_version") is not None:
+            payload["inventory_version"] = self.summary["inventory_version"]
+        if self.summary.get("es_sync") is not None:
+            payload["es_sync"] = self.summary["es_sync"]
+        if self.summary.get("redis_refreshed_at") is not None:
+            payload["redis_refreshed_at"] = self.summary["redis_refreshed_at"]
+        return payload
 
 
 def current_verification_stamp() -> str:
@@ -396,10 +407,8 @@ def _feed_snapshot_path(vendor: str) -> Path:
     return SCANNER_FEED_SNAPSHOT_DIR / f"{slug}.json"
 
 
-def write_feed_snapshot(feed: FeedResult, last_verified: str) -> Path:
-    SCANNER_FEED_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    snapshot_path = _feed_snapshot_path(feed.vendor)
-    payload = {
+def feed_to_snapshot_dict(feed: FeedResult, last_verified: str) -> dict:
+    return {
         "vendor": feed.vendor,
         "scanner_type": feed.scanner_type,
         "source_url": feed.source_url,
@@ -409,6 +418,12 @@ def write_feed_snapshot(feed: FeedResult, last_verified: str) -> Path:
         "cidr_count": len(feed.cidrs),
         "cidrs": feed.cidrs,
     }
+
+
+def write_feed_snapshot(feed: FeedResult, last_verified: str) -> Path:
+    SCANNER_FEED_SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    snapshot_path = _feed_snapshot_path(feed.vendor)
+    payload = feed_to_snapshot_dict(feed, last_verified)
     snapshot_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return snapshot_path
 
@@ -418,7 +433,8 @@ def merge_inventory_rows(
     feeds: list[FeedResult],
     pending_checks: list[dict],
     last_verified: str,
-) -> tuple[list[dict], dict, list[dict]]:
+    previous_feed_snapshots: Optional[dict[str, dict]] = None,
+) -> tuple[list[dict], dict, list[FeedResult]]:
     preserved_rows = [row for row in existing_rows if row["vendor"] in MANUAL_VENDORS]
 
     managed_rows: list[dict] = []
@@ -446,10 +462,11 @@ def merge_inventory_rows(
             continue
 
         if feed.vendor in FEED_SNAPSHOT_VENDORS:
-            snapshot_path = _feed_snapshot_path(feed.vendor)
-            previous_snapshot = {}
-            if snapshot_path.exists():
-                previous_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            previous_snapshot = (previous_feed_snapshots or {}).get(feed.vendor, {})
+            if not previous_snapshot:
+                snapshot_path = _feed_snapshot_path(feed.vendor)
+                if snapshot_path.exists():
+                    previous_snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
             previous_cidrs = set(previous_snapshot.get("cidrs", []))
             next_cidrs = set(feed.cidrs)
             feed_stats["added_ranges"] += len(next_cidrs - previous_cidrs)
@@ -511,17 +528,83 @@ def write_scanner_inventory(rows: list[dict], inventory_path: Path = DEFAULT_SCA
             writer.writerow({column: row.get(column, "") for column in INVENTORY_COLUMNS})
 
 
+def _load_existing_inventory_rows(
+    inventory_path: Path,
+    *,
+    seed_from_files: bool = False,
+) -> tuple[list[dict], dict[str, dict], str]:
+    from threat_intel.scanner_redis_store import get_scanner_redis_store, scanner_inventory_backend
+
+    backend = scanner_inventory_backend()
+    if backend != "redis":
+        return load_scanner_inventory(inventory_path), {}, "file"
+
+    store = get_scanner_redis_store()
+    if seed_from_files or not store.is_populated():
+        store.publish_from_files(inventory_path=inventory_path)
+
+    existing_rows = store.load_csv_rows()
+    previous_snapshots = {
+        snap.get("vendor", ""): snap
+        for snap in store.load_all_feed_snapshots()
+        if snap.get("vendor")
+    }
+    return existing_rows, previous_snapshots, "redis"
+
+
+def _compile_registry_for_clients(
+    merged_rows: list[dict],
+    feed_snapshot_payloads: list[dict],
+    client_ids: Optional[list[str]] = None,
+) -> dict[str, list[dict]]:
+    feed_rows = []
+    for payload in feed_snapshot_payloads:
+        vendor = payload.get("vendor", "")
+        for cidr in payload.get("cidrs", []):
+            feed_rows.append(
+                {
+                    "vendor": vendor,
+                    "scanner_type": payload.get("scanner_type", "internet_scanning"),
+                    "cidr": cidr,
+                    "source_url": payload.get("source_url", ""),
+                    "last_verified": payload.get("last_verified", ""),
+                    "confidence": payload.get("confidence", "medium"),
+                }
+            )
+
+    default_entries = inventory_to_scanner_entries(merged_rows, feed_rows)
+    compiled: dict[str, list[dict]] = {}
+    for client_id in client_ids or ["scanner-lite"]:
+        client_scanners = []
+        client_path = CLIENT_SCANNERS_DIR / f"{client_id}_scanners.json"
+        if client_path.exists():
+            client_payload = json.loads(client_path.read_text(encoding="utf-8"))
+            client_scanners = client_payload.get("scanners", [])
+        merged = {entry["id"]: entry for entry in default_entries}
+        for entry in client_scanners:
+            merged[entry["id"]] = entry
+        compiled[client_id] = list(merged.values())
+    return compiled
+
+
 def refresh_scanner_inventory(
     inventory_path: Path = DEFAULT_SCANNER_INVENTORY_PATH,
     write_changes: bool = True,
     reload_registry: bool = True,
     feeds: Optional[list[Callable[[], FeedResult]]] = None,
+    *,
+    export_files: bool = False,
+    skip_es: bool = False,
+    seed_from_files: bool = False,
 ) -> MaintenanceReport:
     """
     Refresh auto-managed vendor feeds, verify pending vendor documentation URLs,
-    and optionally rewrite known_scanner_inventory.csv.
+    publish to Redis (primary), sync Elasticsearch, and optionally export CSV/JSON files.
     """
-    existing_rows = load_scanner_inventory(inventory_path)
+    existing_rows, previous_snapshots, backend = _load_existing_inventory_rows(
+        inventory_path,
+        seed_from_files=seed_from_files,
+    )
     last_verified = current_verification_stamp()
     report = MaintenanceReport(
         inventory_path=str(inventory_path),
@@ -537,7 +620,16 @@ def refresh_scanner_inventory(
         feed_results,
         report.pending_checks,
         last_verified,
+        previous_feed_snapshots=previous_snapshots,
     )
+
+    updated_snapshot_vendors = {feed.vendor for feed in feed_snapshots}
+    feed_snapshot_payloads = [
+        feed_to_snapshot_dict(feed, last_verified) for feed in feed_snapshots
+    ]
+    for vendor, snapshot in previous_snapshots.items():
+        if vendor and vendor not in updated_snapshot_vendors:
+            feed_snapshot_payloads.append(snapshot)
 
     report.summary = {
         "row_count_before": len(existing_rows),
@@ -547,7 +639,8 @@ def refresh_scanner_inventory(
             for row in merged_rows
             if row.get("cidr") and row.get("confidence", "").lower() in {"high", "medium"}
         ),
-        "feed_snapshot_count": len(feed_snapshots),
+        "feed_snapshot_count": len(feed_snapshot_payloads),
+        "inventory_backend": backend,
         **feed_stats,
     }
 
@@ -556,9 +649,30 @@ def refresh_scanner_inventory(
             report.errors.append(f"{feed.vendor}: {feed.message}")
 
     if write_changes:
-        write_scanner_inventory(merged_rows, inventory_path)
-        for feed in feed_snapshots:
-            write_feed_snapshot(feed, last_verified)
+        if backend == "redis":
+            from threat_intel.scanner_redis_store import get_scanner_redis_store
+
+            store = get_scanner_redis_store()
+            compiled = _compile_registry_for_clients(merged_rows, feed_snapshot_payloads)
+            meta = store.publish_inventory(merged_rows, feed_snapshot_payloads, compiled)
+            report.summary["inventory_version"] = meta.get("version")
+            report.summary["redis_refreshed_at"] = meta.get("refreshed_at")
+
+            if not skip_es:
+                from scanner_lite.storage.inventory_es_store import ScannerInventoryEsStore
+
+                payload = store.build_publish_payload()
+                es_result = ScannerInventoryEsStore().sync_from_publish(payload)
+                store.update_es_sync(es_result.get("index", ""), es_result.get("indexed", 0))
+                report.summary["es_sync"] = es_result
+
+            if export_files:
+                export_stats = store.export_to_files(inventory_path, SCANNER_FEED_SNAPSHOT_DIR)
+                report.summary["export_files"] = export_stats
+        else:
+            write_scanner_inventory(merged_rows, inventory_path)
+            for feed in feed_snapshots:
+                write_feed_snapshot(feed, last_verified)
 
     if reload_registry and write_changes:
         configure_scanners(ScannerRegistry.for_client())
@@ -578,7 +692,22 @@ def main() -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Fetch feeds and print a report without writing the CSV.",
+        help="Fetch feeds and print a report without publishing inventory.",
+    )
+    parser.add_argument(
+        "--export-files",
+        action="store_true",
+        help="After Redis publish, export CSV and feed JSON to disk for git review.",
+    )
+    parser.add_argument(
+        "--skip-es",
+        action="store_true",
+        help="Publish to Redis only; skip Elasticsearch scanner-inventory sync.",
+    )
+    parser.add_argument(
+        "--seed-from-files",
+        action="store_true",
+        help="Force bootstrap Redis from on-disk CSV and feed snapshots before merge.",
     )
     args = parser.parse_args()
 
@@ -586,6 +715,9 @@ def main() -> int:
         inventory_path=Path(args.inventory_path),
         write_changes=not args.dry_run,
         reload_registry=not args.dry_run,
+        export_files=args.export_files,
+        skip_es=args.skip_es,
+        seed_from_files=args.seed_from_files,
     )
     print(json.dumps(report.to_dict(), indent=2))
     return 1 if report.errors else 0

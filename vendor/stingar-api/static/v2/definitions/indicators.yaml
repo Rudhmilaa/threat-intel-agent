@@ -1,0 +1,59 @@
+indicators:
+  get:
+    tags:
+      - indicators
+    summary: Get honeypot indicators
+    description: ""
+    operationId: getIndicators
+    parameters:
+      - name: from_date
+        in: query
+        description: Return sessions after this date
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to_date
+        in: query
+        description: Return sessions before this date
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: rows_per_page
+        in: query
+        description: Maximum number of indicators to return
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: "10"
+      - name: format
+        in: query
+        description: Delimiter for plaintext indicator list
+        required: false
+        schema:
+          type: string
+          nullable: true
+          default: null
+          enum:
+            - newline
+            - space
+            - comma
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    type: string
+          text/plain:
+            schema:
+              type: string

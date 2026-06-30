@@ -1,0 +1,363 @@
+ids-rules:
+  get:
+    tags:
+      - IDS Rules
+    summary: Get extracted honeypot signatures
+    description: |
+      Extracts unique HASSH, JA3, JA3S (Dionaea), and ssh_software (Cowrie client version) signatures
+      from honeypot sessions in Elasticsearch. Returns signatures for preview and rule generation.
+    operationId: getIdsRules
+    parameters:
+      - name: from_date
+        in: query
+        description: |
+          Start of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: 7 days before to_date (last 7 days).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to_date
+        in: query
+        description: |
+          End of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: current UTC time (now).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: app
+        in: query
+        description: Filter by honeypot type
+        required: false
+        schema:
+          type: string
+          enum:
+            - cowrie
+            - dionaea
+            - all
+          default: all
+      - name: rule_types
+        in: query
+        description: Comma-separated rule types to extract (hassh, ja3, ja3s, ssh_software)
+        required: false
+        schema:
+          type: string
+          default: hassh,ja3
+      - name: limit
+        in: query
+        description: |
+          Maximum unique signatures to return per type (max 1000). When set, only the most
+          recent rules (by date) within the date range are returned. E.g. a 30-day range
+          with limit=10 returns the 10 most recent rules per type, not all matches.
+        required: false
+        schema:
+          type: integer
+          default: 500
+          maximum: 1000
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: Extracted signatures and summary
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: object
+                  required:
+                    - signatures
+                    - summary
+                  properties:
+                    signatures:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          type:
+                            type: string
+                            description: Rule type (hassh, ja3, ja3s, ssh_software)
+                          hash:
+                            type: string
+                            description: Fingerprint hash value
+                          source:
+                            type: string
+                            description: Honeypot source (cowrie, dionaea)
+                          count:
+                            type: integer
+                            description: Number of observations
+                          first_seen:
+                            type: string
+                            format: date-time
+                            description: Earliest observation timestamp
+                          src_ips:
+                            type: array
+                            items:
+                              type: string
+                            description: Source IPs observed
+                    summary:
+                      type: object
+                      properties:
+                        total_hassh:
+                          type: integer
+                        total_ja3:
+                          type: integer
+                        total_ja3s:
+                          type: integer
+                        total_ssh_software:
+                          type: integer
+                          description: Count of ssh_software rules (Cowrie client version)
+                        date_range:
+                          type: object
+                          properties:
+                            from:
+                              type: string
+                            to:
+                              type: string
+      "500":
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+ids-rules-preview:
+  get:
+    tags:
+      - IDS Rules
+    summary: Get rules as text for preview
+    description: |
+      Returns Suricata or Snort rules as text/plain for display in the UI. Same parameters as export.
+      Used for the editable preview pane before download.
+    operationId: getIdsRulesPreview
+    parameters:
+      - name: format
+        in: query
+        description: Rule format (suricata or snort). Default suricata.
+        required: false
+        schema:
+          type: string
+          enum: [suricata, snort]
+          default: suricata
+      - name: from_date
+        in: query
+        description: |
+          Start of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: 7 days before to_date (last 7 days).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to_date
+        in: query
+        description: |
+          End of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: current UTC time (now).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: app
+        in: query
+        required: false
+        schema:
+          type: string
+          enum: [cowrie, dionaea, all]
+          default: all
+      - name: rule_types
+        in: query
+        required: false
+        schema:
+          type: string
+          default: hassh,ja3
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 500
+          maximum: 1000
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: Suricata rules as text
+        content:
+          text/plain:
+            schema:
+              type: string
+      "500":
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+ids-rules-feed:
+  get:
+    tags:
+      - IDS Rules
+    summary: Get rules feed for IDS
+    description: |
+      Serves rules for IDS devices. Rules are generated on demand and cached for 5 minutes
+      (configurable via IDS_RULES_FEED_CACHE_TTL). Use format=suricata or format=snort.
+      First request generates and caches; no 503 on cold start.
+      Date range uses IDS_RULES_FEED_DATE_RANGE (default 30d = last 30 days); no from_date/to_date params.
+    operationId: getIdsRulesFeed
+    parameters:
+      - name: format
+        in: query
+        description: Rule format (suricata or snort). Default suricata.
+        required: false
+        schema:
+          type: string
+          enum: [suricata, snort]
+          default: suricata
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: Suricata or Snort rules file
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: 'inline; filename="stingar-honeypot.rules"'
+          Cache-Control:
+            schema:
+              type: string
+              example: 'max-age=300'
+        content:
+          text/plain:
+            schema:
+              type: string
+      "500":
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+ids-rules-status:
+  get:
+    tags:
+      - IDS Rules
+    summary: Get feed status
+    description: Returns last generation time, signature counts, and date range for the on-demand feed.
+    operationId: getIdsRulesStatus
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: Feed status
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                  properties:
+                    last_generated:
+                      type: string
+                      format: date-time
+                    total_hassh:
+                      type: integer
+                    total_ja3:
+                      type: integer
+                    total_ja3s:
+                      type: integer
+                    total_ssh_software:
+                      type: integer
+                    feed_url:
+                      type: string
+                    feed_url_suricata:
+                      type: string
+                      description: Feed URL for Suricata rules (format=suricata)
+                    feed_url_snort:
+                      type: string
+                      description: Feed URL for Snort rules (format=snort)
+                    date_range:
+                      type: object
+                      description: Date range used for last generation (from, to)
+                      properties:
+                        from:
+                          type: string
+                        to:
+                          type: string
+      "500":
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+ids-rules-export:
+  get:
+    tags:
+      - IDS Rules
+    summary: Export Suricata or Snort rules file
+    description: |
+      Generates Suricata or Snort .rules file from honeypot signatures. Use format=suricata
+      or format=snort. Returns a downloadable file suitable for deployment to an IDS.
+    operationId: getIdsRulesExport
+    parameters:
+      - name: format
+        in: query
+        description: Rule format (suricata or snort). Default suricata.
+        required: false
+        schema:
+          type: string
+          enum: [suricata, snort]
+          default: suricata
+      - name: from_date
+        in: query
+        description: |
+          Start of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: 7 days before to_date (last 7 days).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: to_date
+        in: query
+        description: |
+          End of date range (ISO 8601 or YYYY-MM-DD).
+          Default when omitted: current UTC time (now).
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - name: app
+        in: query
+        description: Filter by honeypot type
+        required: false
+        schema:
+          type: string
+          enum:
+            - cowrie
+            - dionaea
+            - all
+          default: all
+      - name: rule_types
+        in: query
+        description: Comma-separated rule types to extract (hassh, ja3, ja3s, ssh_software)
+        required: false
+        schema:
+          type: string
+          default: hassh,ja3
+      - name: limit
+        in: query
+        description: |
+          Maximum unique signatures to return per type (max 1000). When set, only the most
+          recent rules (by date) within the date range are returned.
+        required: false
+        schema:
+          type: integer
+          default: 500
+          maximum: 1000
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: Suricata rules file (attachment)
+        headers:
+          Content-Disposition:
+            schema:
+              type: string
+              example: 'attachment; filename="stingar-honeypot.rules"'
+        content:
+          text/plain:
+            schema:
+              type: string
+              description: Suricata .rules file content
+      "500":
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'

@@ -1,0 +1,201 @@
+store-honeypots:
+  get:
+    tags:
+      - Store
+    summary: Get available honeypots from remote store
+    description: Retrieve a list of available honeypots from the remote store
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: category
+        in: query
+        description: Filter by category
+        required: false
+        schema:
+          type: string
+      - name: hp_type
+        in: query
+        description: Filter by honeypot type
+        required: false
+        schema:
+          type: string
+      - name: author
+        in: query
+        description: Filter by author
+        required: false
+        schema:
+          type: string
+    responses:
+      '200':
+        description: List of available honeypots
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/HoneypotList'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+store-honeypots-byId:
+  get:
+    tags:
+      - Store
+    summary: Get specific remote honeypot details
+    description: Retrieve detailed information about a specific remote honeypot
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: ident
+        in: path
+        description: Remote honeypot ID
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Remote honeypot details
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/HoneypotDetail'
+      '404':
+        $ref: '../components/errors.yaml#/components/schemas/NotFound'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+  post:
+    tags:
+      - Store
+    summary: Install remote honeypot locally
+    description: Install a remote honeypot locally
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: ident
+        in: path
+        description: Remote honeypot ID
+        required: true
+        schema:
+          type: string
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/store.yaml#/InstallationRequest'
+    responses:
+      '200':
+        description: Installation successful
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/InstallationResponse'
+      '400':
+        $ref: '../components/errors.yaml#/components/schemas/BadRequest'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+store-search:
+  get:
+    tags:
+      - Store
+    summary: Search remote honeypots
+    description: Search remote honeypots by various criteria
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: name
+        in: query
+        description: Search by name
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        description: Search by category
+        required: false
+        schema:
+          type: string
+      - name: hp_type
+        in: query
+        description: Search by honeypot type
+        required: false
+        schema:
+          type: string
+      - name: author
+        in: query
+        description: Search by author
+        required: false
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Search results
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/HoneypotList'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+store-categories:
+  get:
+    tags:
+      - Store
+    summary: Get available honeypot categories
+    description: Retrieve a list of available honeypot categories
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: List of categories
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/CategoryList'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+store-installed:
+  get:
+    tags:
+      - Store
+    summary: Get list of local installations
+    description: Retrieve a list of locally installed honeypots
+    security:
+      - ApiKeyAuth: []
+    responses:
+      '200':
+        description: List of local installations
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/InstallationList'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+
+store-installed-byId:
+  delete:
+    tags:
+      - Store
+    summary: Remove local installation
+    description: Remove a locally installed honeypot
+    security:
+      - ApiKeyAuth: []
+    parameters:
+      - name: ident
+        in: path
+        description: Local installation ID
+        required: true
+        schema:
+          type: string
+    responses:
+      '200':
+        description: Installation removed successfully
+        content:
+          application/json:
+            schema:
+              $ref: '../components/store.yaml#/InstallationResponse'
+      '404':
+        $ref: '../components/errors.yaml#/components/schemas/NotFound'
+      '500':
+        $ref: '../components/errors.yaml#/components/schemas/InternalServerError'
+

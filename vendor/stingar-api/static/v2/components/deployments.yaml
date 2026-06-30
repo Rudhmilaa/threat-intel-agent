@@ -1,0 +1,183 @@
+components:
+  schemas:
+    Deployment:
+      type: object
+      properties:
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+        uuid:
+          type: string
+        status:
+          type: integer
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+        hp_options:
+          type: string
+        tags:
+          $ref: "tags.yaml#/components/schemas/Tags"
+
+
+    DeploymentSubmission:
+      type: object
+      title: Deployment Submission
+      oneOf:
+        - $ref: "#/components/schemas/CowrieDeploySubmission"
+        - $ref: "#/components/schemas/DionaeaDeploySubmission"
+        - $ref: "#/components/schemas/GlastopfDeploySubmission"
+        - $ref: "#/components/schemas/ConpotDeploySubmission"
+        - $ref: "#/components/schemas/AmunDeploySubmission"
+        - $ref: "#/components/schemas/RDPhoneyDeploySubmission"
+
+
+    CowrieDeploySubmission:
+      type: object
+      title: Cowrie Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "cowrie"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/CowrieHpOptions"
+
+    DionaeaDeploySubmission:
+      type: object
+      title: Dionaea Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "dionaea"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/DionaeaHpOptions"
+
+    GlastopfDeploySubmission:
+      type: object
+      title: Glastopf Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "glastopf"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/GlastopfHpOptions"
+
+    ConpotDeploySubmission:
+      type: object
+      title: Conpot Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "conpot"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/ConpotHpOptions"
+
+    AmunDeploySubmission:
+      type: object
+      title: Amun Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "amun"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/AmunHpOptions"
+
+    RDPhoneyDeploySubmission:
+      type: object
+      title: RDPhoney Deployment
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer
+        hp_type:
+          type: string
+          enum:
+            - "rdphoney"
+          required: true
+        tags:
+          $ref: "#/components/schemas/TagArray"
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/RDPhoneyHpOptions"
+
+
+    TagArray:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer

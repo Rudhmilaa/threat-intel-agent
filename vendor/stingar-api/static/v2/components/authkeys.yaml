@@ -1,0 +1,17 @@
+components:
+  schemas:
+    AuthKey:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        public_key:
+          type: string
+
+    AuthKeySubmission:
+      type: object
+      properties:
+        name:
+          type: string

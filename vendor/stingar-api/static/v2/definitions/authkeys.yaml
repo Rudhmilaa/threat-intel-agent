@@ -1,0 +1,122 @@
+authkeys:
+  get:
+    tags:
+      - authkeys
+    summary: Get authentication keys for host configuration.
+    description: ""
+    operationId: getAuthKeys
+    parameters:
+      - in: query
+        name: name
+        description: Name of key
+        schema:
+          type: string
+        required: false
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/authkeys.yaml#/components/schemas/AuthKey"
+  post:
+    tags:
+      - authkeys
+    summary: Create authentication keys for host configuration
+    description: ""
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/authkeys.yaml#/components/schemas/AuthKeySubmission'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/authkeys.yaml#/components/schemas/AuthKey"
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+authkeys-byId:
+  get:
+    tags:
+      - authkeys
+    summary: Get authentication key by id
+    description: ""
+    operationId: getAutyKeyById
+    parameters:
+      - name: authKeyId
+        in: path
+        description: Id of authentication key to fetch
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/authkeys.yaml#/components/schemas/AuthKey"
+      "404":
+        description: host not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - authkeys
+    summary: Delete authentication key by id
+    description: ""
+    operationId: deleteAuthKeyById
+    parameters:
+      - name: authKeyId
+        in: path
+        description: Id of authentication key to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/authkeys.yaml#/components/schemas/AuthKey"
+      "404":
+        description: host not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

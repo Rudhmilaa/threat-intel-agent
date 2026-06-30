@@ -1,0 +1,1 @@
+export const KIBANA_COOKIE_NAME = "__clerk-kibana-jwt";

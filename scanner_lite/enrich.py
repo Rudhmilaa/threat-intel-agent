@@ -6,8 +6,6 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from threat_intel.scanners import ScannerRegistry, configure_scanners
-
 from scanner_lite.asn import build_asn_batches, resolve_asn
 from scanner_lite.cascade import run_cascade
 from scanner_lite.classifier import build_scanner_tag, classify_outcome
@@ -66,8 +64,6 @@ def enrich_ip(
     events_today: Optional[int] = None,
     events_for_ip: Optional[int] = None,
 ) -> dict:
-    configure_scanners(ScannerRegistry.for_client(client_id))
-
     es_store = store or ScannerLiteStore()
     if not event:
         cached = es_store.get_ip_cache(ip_address)
@@ -95,6 +91,7 @@ def enrich_ip(
         events_in_batch=events_in_batch,
         events_today=events_today,
     )
+    _stamp_inventory_version(investigation_metadata)
 
     asn = resolve_asn(ip_address, signals)
 
@@ -154,7 +151,6 @@ def enrich_events(
     store: Optional[ScannerLiteStore] = None,
     index_sessions: bool = True,
 ) -> dict[str, Any]:
-    configure_scanners(ScannerRegistry.for_client(client_id))
     es_store = store or ScannerLiteStore()
 
     ip_counts = Counter(
@@ -212,6 +208,18 @@ def enrich_events(
         "es_stats": batch_stats,
         "session_es_stats": session_stats,
     }
+
+
+def _stamp_inventory_version(investigation_metadata: dict) -> None:
+    from threat_intel.scanner_redis_store import get_inventory_meta
+
+    inv_meta = get_inventory_meta()
+    if not inv_meta:
+        return
+    if inv_meta.get("version") is not None:
+        investigation_metadata["scanner_inventory_version"] = inv_meta["version"]
+    if inv_meta.get("refreshed_at"):
+        investigation_metadata["scanner_inventory_refreshed_at"] = inv_meta["refreshed_at"]
 
 
 def _brief(value: Any) -> Any:

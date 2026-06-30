@@ -1,0 +1,32 @@
+# Overlay for an existing STINGAR v2.3 deployment — adds scanner-lite + patched fluentd.
+# Usage from your STINGAR root:
+#   docker compose -f docker-compose.yml -f /path/to/threat-intel-agent-lite/deploy/stingar/scanner-lite.overlay.yml up -d
+
+services:
+  scanner-lite:
+    build:
+      context: ${SCANNER_LITE_BUILD_CONTEXT:-../..}
+      dockerfile: deploy/stingar/Dockerfile.scanner-lite
+    restart: on-failure
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      REDIS_URL: redis://redis:6379/0
+      SCANNER_INVENTORY_BACKEND: redis
+      STINGAR_STORAGE_BACKEND: elasticsearch
+      SCANNER_LITE_HOST: 0.0.0.0
+      SCANNER_LITE_PORT: "8091"
+      STINGAR_CLIENT_ID: scanner-lite
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  fluentd:
+    volumes:
+      - ./fluentd.conf:/fluentd/etc/fluent.conf:ro
+    depends_on:
+      scanner-lite:
+        condition: service_healthy

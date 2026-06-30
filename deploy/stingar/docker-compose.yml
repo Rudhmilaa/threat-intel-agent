@@ -1,0 +1,129 @@
+# STINGAR v2.3 + scanner-lite enrichment sidecar.
+# Run from this directory:
+#   cp stingar.env.example stingar.env   # configure first
+#   docker compose up -d
+services:
+  docs:
+    image: 4warned/stingar-user-docs:v2.3
+
+  elasticsearch:
+    user: "1000"
+    image: 4warned/elasticsearch:v2.3
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data:z
+    ports:
+      - "127.0.0.1:9200:9200"
+      - "127.0.0.1:9300:9300"
+    environment:
+      discovery.type: "single-node"
+      ES_JAVA_OPTS: "-Xmx1G -Xms1G"
+
+  kibana:
+    user: "1000"
+    image: 4warned/kibana:v2.3
+    ports:
+      - "127.0.0.1:5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.0.4
+
+  scanner-lite:
+    build:
+      context: ../..
+      dockerfile: deploy/stingar/Dockerfile.scanner-lite
+    restart: on-failure
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      REDIS_URL: redis://redis:6379/0
+      SCANNER_INVENTORY_BACKEND: redis
+      STINGAR_STORAGE_BACKEND: elasticsearch
+      SCANNER_LITE_HOST: 0.0.0.0
+      SCANNER_LITE_PORT: "8091"
+      STINGAR_CLIENT_ID: scanner-lite
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  fluentd:
+    image: 4warned/fluentd:v2.3
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      - "127.0.0.1:24225:24225"
+      - "127.0.0.1:24225:24225/udp"
+    env_file:
+      - stingar.env
+    volumes:
+      - ./fluentd.conf:/fluentd/etc/fluent.conf:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      scanner-lite:
+        condition: service_healthy
+
+  stingarapi:
+    image: 4warned/stingar-api:v2.3
+    env_file:
+      - stingar.env
+    volumes:
+      - ./storage/db:/srv/db:z
+      - ./stingar.env:/app/stingar.env:rw
+      - honeypot_templates:/opt/templates
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  stingarui:
+    build:
+      context: ../../vendor/stingar-ui
+      dockerfile: Dockerfile
+      args:
+        VERSION: v2.3
+    env_file:
+      - stingar.env
+    volumes:
+      - bundle:/bundle
+      - node_module_cache:/stingar-ui/node_modules
+
+  web:
+    image: nginx
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./certs:/etc/nginx/conf.d:z
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - credentials:/credentials
+    depends_on:
+      - stingarui
+      - kibana
+      - docs
+    restart: on-failure
+
+  langstroth:
+    image: 4warned/langstroth:v2.3
+    env_file:
+      - stingar.env
+    depends_on:
+      - stingarapi
+
+volumes:
+  bundle:
+  node_module_cache:
+  credentials:
+  elastic_data:
+  honeypot_templates:

@@ -17,3 +17,5 @@ Reused from the reference codebase on this branch:
 - [`deploy/docker-compose.yml`](deploy/docker-compose.yml) — local Elasticsearch
 
 Not required for lite demos: `central/`, `stingar/`, `main.py` agent runtime.
+
+Documentation: [docs/SCANNER-LITE-ARCHITECTURE.md](docs/SCANNER-LITE-ARCHITECTURE.md) · [docs/CODE_REVIEW.md](docs/CODE_REVIEW.md)

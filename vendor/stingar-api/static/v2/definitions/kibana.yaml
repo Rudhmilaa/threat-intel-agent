@@ -1,0 +1,180 @@
+kibana-objects:
+  get:
+    tags:
+      - kibana
+    summary: Get saved Kibana objects
+    description: ""
+    parameters:
+      - name: name
+        in: query
+        description: Title of Kibana object to retrieve
+        required: false
+        schema:
+          type: string
+      - name: type
+        in: query
+        description: Type of object to return. "all" returns all object types.
+        required: false
+        schema:
+          type: string
+          enum: ["dashboard", "all"]
+      - name: id_only
+        in: query
+        description: Return id of dashboard only. Only works when querying a single object type.
+        required: false
+        schema:
+          type: boolean
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+
+kibana-saved-objects:
+  get:
+    tags:
+      - kibana
+    summary: Get saved Kibana objects
+    description: ""
+    #      parameters:
+    #        - name: active
+    #          in: query
+    #          description: Query for active config.
+    #          required: false
+    #          schema:
+    #           type: boolean
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    type: object
+
+kibana-saved-objects-byId:
+  get:
+    tags:
+      - kibana
+    summary: Get saved Kibana objects by id
+    description: ""
+    parameters:
+      - name: objectId
+        in: path
+        description: Id of saved objects record to return
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+      "404":
+        description: user not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+kibana-load:
+  post:
+    tags:
+      - kibana
+    summary: Load saved config currently set to active.
+    description: ""
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+kibana-load-byId:
+  post:
+    tags:
+      - kibana
+    summary: Load specific saved config.
+    description: ""
+    parameters:
+      - name: objectId
+        in: path
+        description: Id of saved objects record to return
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+kibana-save:
+  post:
+    tags:
+      - kibana
+    summary: Save current Kibana objects to database.
+    description: ""
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"

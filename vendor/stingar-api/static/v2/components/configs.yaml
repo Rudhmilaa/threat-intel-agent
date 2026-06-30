@@ -1,0 +1,126 @@
+components:
+  schemas:
+    Config:
+      type: object
+      properties:
+        id:
+          type: integer
+        uuid:
+          type: string
+        hp_type:
+          type: string
+        hp_options:
+          type: object
+        created:
+          type: string
+          format: date-time
+
+    ConfigSubmission:
+      type: object
+      title: Config Submission
+      oneOf:
+        - $ref: "#/components/schemas/CowrieConfigSubmission"
+        - $ref: "#/components/schemas/DionaeaConfigSubmission"
+        - $ref: "#/components/schemas/GlastopfConfigSubmission"
+        - $ref: "#/components/schemas/ConpotConfigSubmission"
+        - $ref: "#/components/schemas/AmunConfigSubmission"
+        - $ref: "#/components/schemas/RDPhoneyConfigSubmission"
+        - $ref: "#/components/schemas/CleanupAction"
+
+    CleanupAction:
+      type: object
+      title: Cleanup Action
+      properties:
+        action:
+          type: string
+          enum:
+            - "cleanup_invalid"
+          required: true
+      required:
+        - action
+
+    CowrieConfigSubmission:
+      type: object
+      title: Cowrie Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "cowrie"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/CowrieHpOptions"
+
+
+    DionaeaConfigSubmission:
+      type: object
+      title: Dionaea Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "dionaea"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/DionaeaHpOptions"
+
+
+    GlastopfConfigSubmission:
+      type: object
+      title: Glastopf Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "glastopf"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/GlastopfHpOptions"
+
+    ConpotConfigSubmission:
+      type: object
+      title: Conpot Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "conpot"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/ConpotHpOptions"
+
+    AmunConfigSubmission:
+      type: object
+      title: Amun Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "amun"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/AmunHpOptions"
+
+    RDPhoneyConfigSubmission:
+      type: object
+      title: RDPhoney Config
+      properties:
+        name:
+          type: string
+        hp_type:
+          type: string
+          enum:
+            - "rdphoney"
+          required: true
+        hp_options:
+          $ref: "hp_options.yaml#/components/schemas/RDPhoneyHpOptions"

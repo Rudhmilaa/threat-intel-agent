@@ -1,0 +1,33 @@
+components:
+  schemas:
+    Host:
+      type: object
+      properties:
+        id:
+          type: integer
+        authkey_id:
+          type: integer
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        created:
+          type: string
+          format: date-time
+        updated:
+          type: string
+          format: date-time
+
+    HostSubmission:
+      type: object
+      properties:
+        address:
+          type: string
+        ssh_port:
+          type: integer
+        username:
+          type: string
+        authkey_id:
+          type: integer

@@ -1,0 +1,28 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY threat_intel/ threat_intel/
+COPY scanner_lite/ scanner_lite/
+COPY config/scanners/ config/scanners/
+COPY es/templates/ es/templates/
+
+ENV SCANNER_LITE_HOST=0.0.0.0 \
+    SCANNER_LITE_PORT=8091 \
+    STINGAR_STORAGE_BACKEND=elasticsearch \
+    SCANNER_INVENTORY_BACKEND=redis \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8091
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=3 \
+  CMD curl -fsS http://localhost:8091/health || exit 1
+
+CMD ["python", "-m", "scanner_lite.server"]

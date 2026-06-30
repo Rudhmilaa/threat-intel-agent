@@ -43,6 +43,13 @@ class SessionQueryTests(unittest.TestCase):
         must = body["query"]["bool"]["must"]
         self.assertTrue(any("investigation.category" in str(clause) for clause in must))
 
+    def test_outcome_category_top_level_alias(self):
+        terms = parse_session_query("outcome_category:malicious")
+        self.assertEqual(terms[0].field, "outcome_category")
+        body = session_query_to_es("outcome_category:malicious", hours=24)
+        must = body["query"]["bool"]["must"]
+        self.assertTrue(any("outcome_category" in str(clause) for clause in must))
+
 
 if __name__ == "__main__":
     unittest.main()

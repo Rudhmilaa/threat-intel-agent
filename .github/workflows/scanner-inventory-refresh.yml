@@ -11,6 +11,21 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      REDIS_URL: redis://127.0.0.1:6379/0
+      SCANNER_INVENTORY_BACKEND: redis
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,8 +36,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Refresh known scanner inventory
-        run: python -m threat_intel.scanner_inventory_maintenance
+      - name: Seed Redis from committed inventory (first run)
+        run: python scripts/seed-scanner-redis.py --skip-es
+
+      - name: Refresh known scanner inventory (Redis publish + export files)
+        run: python -m threat_intel.scanner_inventory_maintenance --export-files --skip-es
 
       - name: Commit inventory updates
         run: |
@@ -34,6 +52,8 @@ jobs:
           else
             git commit -m "$(cat <<'EOF'
 Refresh known scanner inventory from official vendor feeds.
+
+Redis-primary publish with CSV/feed JSON export for git review.
 
 EOF
 )"

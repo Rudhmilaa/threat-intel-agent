@@ -1,0 +1,127 @@
+HoneypotList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/Honeypot'
+
+HoneypotDetail:
+  type: object
+  properties:
+    data:
+      $ref: '#/Honeypot'
+
+Honeypot:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Unique identifier for the honeypot
+    name:
+      type: string
+      description: Name of the honeypot
+    display_name:
+      type: string
+      description: Display name for the honeypot
+    description:
+      type: string
+      description: Description of the honeypot
+    version:
+      type: string
+      description: Version number
+    author:
+      type: string
+      description: Author of the honeypot
+    category:
+      type: string
+      description: Category of the honeypot
+    hp_type:
+      type: string
+      description: Type of honeypot
+    tags:
+      type: array
+      items:
+        type: string
+      description: Tags associated with the honeypot
+    dependencies:
+      type: array
+      items:
+        type: string
+      description: Dependencies required for the honeypot
+    configuration:
+      type: object
+      description: Configuration template for the honeypot
+    created_at:
+      type: string
+      format: date-time
+      description: Creation timestamp
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp
+
+CategoryList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        type: string
+      description: List of available categories
+
+InstallationList:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        $ref: '#/LocalInstallation'
+
+LocalInstallation:
+  type: object
+  properties:
+    id:
+      type: string
+      description: Unique identifier for the local installation
+    honeypot_id:
+      type: string
+      description: ID of the original remote honeypot
+    name:
+      type: string
+      description: Name of the installed honeypot
+    version_installed:
+      type: string
+      description: Version that was installed
+    installation_path:
+      type: string
+      description: Path where the honeypot is installed
+    status:
+      type: string
+      description: Current status of the installation
+    installed_at:
+      type: string
+      format: date-time
+      description: Installation timestamp
+    updated_at:
+      type: string
+      format: date-time
+      description: Last update timestamp
+
+InstallationRequest:
+  type: object
+  properties:
+    installation_path:
+      type: string
+      description: Path where to install the honeypot
+    configuration:
+      type: object
+      description: Configuration overrides for the installation
+  required:
+    - installation_path
+
+InstallationResponse:
+  type: object
+  properties:
+    data:
+      $ref: '#/LocalInstallation' 

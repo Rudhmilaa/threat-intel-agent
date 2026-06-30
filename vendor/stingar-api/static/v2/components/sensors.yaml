@@ -1,0 +1,23 @@
+components:
+  schemas:
+    Sensor:
+      type: object
+      properties:
+        id:
+          type: string
+        updated:
+          type: string
+        created:
+          type: string
+        ip:
+          type: string
+        hostname:
+          type: string
+        honeypot:
+          type: string
+        uuid:
+          type: string
+        asn:
+          type: string
+        tags:
+          $ref: "tags.yaml#/components/schemas/Tags"

@@ -1,0 +1,138 @@
+sessions:
+  get:
+    tags:
+      - sessions
+    summary: Get honeypot sessions
+    description: ""
+    operationId: getSessions
+    parameters:
+      - in: query
+        name: from_date
+        description: Return sessions after this date
+        schema:
+          type: string
+          format: date-time
+        required: false
+      - in: query
+        name: to_date
+        description: Return sessions before this date
+        schema:
+          type: string
+          format: date-time
+        required: false
+      - in: query
+        name: show_data
+        description: Show honeypot specific data for sessions
+        schema:
+          default: true
+          type: boolean
+        required: false
+      - in: query
+        name: show_ttylog
+        description: Show ttylog data for sessions. This field is ignored if "show_data" is set to "false."
+        schema:
+          default: false
+          type: boolean
+        required: false
+      - in: query
+        name: rows_per_page
+        description: Number session rows returned in each page response
+        schema:
+          default: 20
+          type: int
+        required: false
+      - in: query
+        name: display_page_number
+        description: Displays page number response
+        schema:
+          default: 1
+          type: int
+        required: false
+      - in: query
+        name: params
+        schema:
+          type: object
+          default: '{"app": "cowrie"}'
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  properties:
+                    count:
+                      type: integer
+                    documents:
+                      type: array
+                      items:
+                        $ref: "../components/sessions.yaml#/components/schemas/Session"
+sessions-byId:
+  get:
+    tags:
+      - sessions
+    summary: Get session by Id
+    description: ""
+    operationId: getSessiohById
+    parameters:
+      - name: sessionId
+        in: path
+        description: ID of session to return
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/sessions.yaml#/components/schemas/Session"
+      "404":
+        description: session not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+sessions-bySensor:
+  delete:
+    tags:
+      - sessions
+    summary: Delete all sessions belonging to sensor Id
+    description: ""
+    operationId: deleteSessionById
+    parameters:
+      - name: sensorId
+        in: path
+        description: ID of sensor to delete all sessions 
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/sessions.yaml#/components/schemas/Session"
+      "404":
+        description: sessions not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+

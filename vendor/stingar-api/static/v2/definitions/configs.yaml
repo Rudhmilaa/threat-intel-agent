@@ -1,0 +1,143 @@
+configs:
+  get:
+    tags:
+      - configs
+    summary: Get configs for honeypot deployments
+    description: ""
+    operationId: getConfigs
+    parameters:
+      - in: query
+        name: hp_type
+        description: Type of honeypot for configuration
+        schema:
+          type: string
+        required: false
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: "../components/configs.yaml#/components/schemas/Config"
+  post:
+    tags:
+      - configs
+    summary: Create config for honeypot deployment or cleanup invalid configs
+    description: "Create a new honeypot configuration or cleanup invalid configurations with empty hp_type fields"
+    requestBody:
+      description: ""
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../components/configs.yaml#/components/schemas/ConfigSubmission"
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    data:
+                      $ref: "../components/configs.yaml#/components/schemas/Config"
+                - type: object
+                  properties:
+                    data:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                        deleted_count:
+                          type: integer
+                        deleted_configs:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                              name:
+                                type: string
+                              hp_type:
+                                type: string
+      "400":
+        description: error response
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+
+configs-byId:
+  get:
+    tags:
+      - configs
+    summary: Get configs for honeypot deployments by id
+    descrption: ""
+    operationId: getConfigById
+    parameters:
+      - name: configId
+        in: path
+        description: Id of config to fetch
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/configs.yaml#/components/schemas/Config"
+      "404":
+        description: config not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
+  delete:
+    tags:
+      - configs
+    summary: Delete config by id
+    description: ""
+    operationId: deleteConfigById
+    parameters:
+      - name: configId
+        in: path
+        description: Id of config to delete
+        required: true
+        schema:
+          type: string
+    security:
+      - ApiKeyAuth: []
+    responses:
+      "200":
+        description: successful operation
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  $ref: "../components/configs.yaml#/components/schemas/Config"
+      "404":
+        description: config not found
+        content:
+          application/json:
+            schema:
+              $ref: "../components/errors.yaml#/components/schemas/Errors"
