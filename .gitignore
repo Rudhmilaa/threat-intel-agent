@@ -1,8 +1,16 @@
 .env
 .venv/
 .venv-1/
+.run/
 __pycache__/
 threat_report.json
 .stingar_seen_ips.json
 data/
 config/clients/api_keys.json
+deploy/stingar/stingar.env
+deploy/stingar/certs/
+vendor/stingar-ui/node_modules/
+deploy/stingar/storage/
+vendor/stingar.env
+vendor/stingar-ui/.next/
+vendor/stingar-ui/next-env.d.ts

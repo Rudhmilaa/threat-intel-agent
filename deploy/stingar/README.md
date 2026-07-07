@@ -11,10 +11,19 @@
 
 ## Quick start (full stack)
 
+See **[docs/DEMO-DEPLOY.md](../../docs/DEMO-DEPLOY.md)** for collaborator step-by-step instructions.
+
+One command from repo root:
+
+```bash
+./scripts/deploy-stingar-demo.sh
+```
+
+Manual steps:
+
 ```bash
 cd deploy/stingar
-cp base/stingar.env.example stingar.env   # fill CHANGEME values
-# Merge scanner-lite vars from stingar.env.example in this directory
+cp stingar.env.demo stingar.env
 mkdir -p storage/db certs
 
 docker compose up -d
@@ -24,6 +33,8 @@ docker compose up -d
 ```
 
 Requires ~5GB free disk for Elasticsearch + image pulls.
+
+**Automated demo:** from repo root run `./scripts/deploy-stingar-demo.sh` — see [docs/DEMO-DEPLOY.md](../../docs/DEMO-DEPLOY.md).
 
 ## Overlay on existing STINGAR
 

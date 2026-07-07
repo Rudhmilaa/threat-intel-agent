@@ -1,3 +1,5 @@
+import os
+
 from storage.es import StingarES
 from storage.db import StingarDB
 from storage.kibana import StingarKibana
@@ -21,6 +23,6 @@ builders = {'amun': AmunFoundation(),
             'uhp': UHPFoundation()}
 
 
-es = StingarES()
+es = StingarES(host=os.environ.get("ELASTICSEARCH_HOST", "elasticsearch"))
 db = StingarDB()
 kb = StingarKibana()

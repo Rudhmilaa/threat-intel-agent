@@ -94,6 +94,8 @@ services:
         VERSION: v2.3
     env_file:
       - stingar.env
+    ports:
+      - "127.0.0.1:3000:3000"
     volumes:
       - bundle:/bundle
       - node_module_cache:/stingar-ui/node_modules

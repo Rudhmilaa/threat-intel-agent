@@ -5,10 +5,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PYTHON="${PYTHON:-$ROOT/.venv-1/bin/python}"
+PYTHON="${PYTHON:-$ROOT/.venv-demo/bin/python}"
 if [[ ! -x "$PYTHON" ]]; then
   PYTHON="${PYTHON:-python3}"
 fi
+
+ensure_venv() {
+  if [[ -x "$ROOT/.venv-demo/bin/python" ]]; then
+    PYTHON="$ROOT/.venv-demo/bin/python"
+    return 0
+  fi
+  log "Creating .venv-demo and installing requirements..."
+  python3 -m venv "$ROOT/.venv-demo"
+  "$ROOT/.venv-demo/bin/pip" install -q -r "$ROOT/requirements.txt"
+  PYTHON="$ROOT/.venv-demo/bin/python"
+}
 
 export STINGAR_ES_URL="${STINGAR_ES_URL:-http://127.0.0.1:9200}"
 export ELASTICSEARCH_URL="${ELASTICSEARCH_URL:-$STINGAR_ES_URL}"
@@ -150,9 +161,22 @@ apply_templates() {
 
 start_server() {
   mkdir -p "$ROOT/.run"
+  if [[ -f "$ROOT/.run/scanner-lite.pid" ]] && kill -0 "$(cat "$ROOT/.run/scanner-lite.pid")" 2>/dev/null; then
+    if curl -fs "http://127.0.0.1:$SCANNER_LITE_PORT/health" >/dev/null 2>&1; then
+      log "scanner-lite already running (PID $(cat "$ROOT/.run/scanner-lite.pid"))"
+      return 0
+    fi
+  fi
   log "Starting scanner-lite API on :$SCANNER_LITE_PORT ..."
-  "$PYTHON" -m scanner_lite.server >"$ROOT/.run/scanner-lite.log" 2>&1 &
+  nohup env ELASTICSEARCH_URL="$ELASTICSEARCH_URL" \
+    REDIS_URL="${REDIS_URL:-}" \
+    SCANNER_INVENTORY_BACKEND="${SCANNER_INVENTORY_BACKEND:-file}" \
+    STINGAR_STORAGE_BACKEND=elasticsearch \
+    SCANNER_LITE_HOST=127.0.0.1 \
+    SCANNER_LITE_PORT="$SCANNER_LITE_PORT" \
+    "$PYTHON" -m scanner_lite.server >>"$ROOT/.run/scanner-lite.log" 2>&1 &
   echo $! >"$ROOT/.run/scanner-lite.pid"
+  disown 2>/dev/null || true
   for _ in $(seq 1 30); do
     curl -fs "http://127.0.0.1:$SCANNER_LITE_PORT/health" >/dev/null 2>&1 && break
     sleep 1
@@ -213,6 +237,7 @@ demo_events() {
 
 case "${1:-up}" in
   up)
+    ensure_venv
     start_es
     apply_templates
     seed_scanner_redis_if_needed
@@ -225,6 +250,7 @@ case "${1:-up}" in
     log "Logs: .run/scanner-lite.log"
     ;;
   up-native)
+    ensure_venv
     start_es_native
     apply_templates
     seed_scanner_redis_if_needed

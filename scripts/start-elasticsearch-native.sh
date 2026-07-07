@@ -64,6 +64,8 @@ nohup "$ES_BIN" \
   -E http.port=9200 \
   -E xpack.security.enabled=false \
   -E xpack.ml.enabled=false \
+  -E cluster.routing.allocation.disk.threshold_enabled=false \
+  -E ingest.geoip.downloader.enabled=false \
   >>"$LOG_DIR/elasticsearch-native.log" 2>&1 &
 echo $! >"$PID_FILE"
 

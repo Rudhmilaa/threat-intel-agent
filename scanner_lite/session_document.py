@@ -122,8 +122,15 @@ def to_stingar_session(
     if meta.get("scanner_inventory_refreshed_at"):
         scanner_lite_block["inventory_refreshed_at"] = meta["scanner_inventory_refreshed_at"]
 
+    ts = enriched.get("@timestamp")
+    honeypot_type = enriched.get("honeypot_type") or raw.get("app") or (event or {}).get("honeypot_type")
+    protocol = enriched.get("protocol") or raw.get("protocol") or (event or {}).get("protocol")
+
     doc = {
-        "@timestamp": enriched.get("@timestamp"),
+        "@timestamp": ts,
+        "start_time": ts,
+        "app": honeypot_type,
+        "protocol": protocol,
         "src_ip": source_ip,
         "outcome_category": outcome,
         "outcome_summary": build_outcome_summary(enriched, meta, scanner_tag),

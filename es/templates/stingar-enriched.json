@@ -14,6 +14,9 @@
       "dynamic": "strict",
       "properties": {
         "@timestamp": { "type": "date" },
+        "start_time": { "type": "date" },
+        "app": { "type": "keyword" },
+        "protocol": { "type": "keyword" },
         "src_ip": { "type": "ip" },
         "session_id": { "type": "keyword" },
         "outcome_category": { "type": "keyword" },

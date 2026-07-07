@@ -7,10 +7,11 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 ### Scanner enrichment lite (`scanner-enrichment-lite` branch)
 
 1. **[SCANNER-LITE.md](./SCANNER-LITE.md)** — quick start, API, demo IPs
-2. **[SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)** — end-to-end demo script (curl, session integration, Kibana)
-3. **[SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)** — system design, module map, mermaid diagrams
-4. **[CODE_REVIEW.md](./CODE_REVIEW.md)** — reviewer checklist and verification script
-5. **[API-CASCADE.md](./API-CASCADE.md)** — endpoint eval, ranking, cost model
+2. **[DEMO-DEPLOY.md](./DEMO-DEPLOY.md)** — **start here for demos** (one-command deploy, full/lite/native paths)
+3. **[SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)** — end-to-end demo script (curl, session integration, Kibana)
+4. **[SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)** — system design, module map, mermaid diagrams
+5. **[CODE_REVIEW.md](./CODE_REVIEW.md)** — reviewer checklist and verification script
+6. **[API-CASCADE.md](./API-CASCADE.md)** — endpoint eval, ranking, cost model
 
 ### Full hybrid platform (`threat-enrich-agent` branch)
 
@@ -27,6 +28,7 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 | Document | Covers |
 |---|---|
+| [DEMO-DEPLOY.md](./DEMO-DEPLOY.md) | **Collaborator demo deploy** (one script, full/lite/native, troubleshooting) |
 | [SCANNER-LITE.md](./SCANNER-LITE.md) | Quick start, API, demo, session integration |
 | [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md) | Full end-to-end demo walkthrough and copy-paste script |
 | [SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md) | Scanner-lite system design (mermaid diagrams) |
