@@ -18,10 +18,20 @@ export SCANNER_LITE_URL="${SCANNER_LITE_URL:-http://127.0.0.1:8091}"
 log() { echo "[deploy-stingar-demo] $*"; }
 
 if [[ -z "${STINGAR_LOCAL_DEMO_OK:-}" ]]; then
-  log "NOTE: For an existing Duke VM (e.g. vcm-51366.vm.duke.edu), SSH to the VM and run:"
-  log "      ./scripts/deploy-stingar-duke-vm.sh   (see docs/DEMO-DEPLOY.md)"
-  log "      This script is for a full local localhost stack only."
+  log "========================================================================"
+  log "  Duke VM already running? (e.g. vcm-51366.vm.duke.edu/attack-analysis)"
+  log "  Do NOT use this script on your laptop."
+  log "  SSH to the VM and run:  ./scripts/deploy-stingar-duke-vm.sh"
+  log "  See docs/DEMO-DEPLOY.md"
+  log "========================================================================"
   echo ""
+  if [[ -t 0 ]] && [[ "${STINGAR_LOCAL_DEMO_OK:-}" != "1" ]]; then
+    read -r -p "Continue with LOCAL localhost Docker demo anyway? [y/N] " ans || true
+    if [[ ! "$ans" =~ ^[Yy]$ ]]; then
+      log "Aborted. Use deploy-stingar-duke-vm.sh on the VM instead."
+      exit 0
+    fi
+  fi
 fi
 
 check_disk() {

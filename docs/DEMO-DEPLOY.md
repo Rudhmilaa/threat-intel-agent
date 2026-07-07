@@ -2,7 +2,18 @@
 
 Deploy the **OUTCOME** column demo for collaborators on branch **`scanner-enrichment-lite`**.
 
-## Duke VM (existing STINGAR) — use this if you already have a VM
+## If you already have the Duke VM (read this first)
+
+**Example:** STINGAR is up at **https://vcm-51366.vm.duke.edu/attack-analysis**
+
+| Do this | Don't do this |
+|---------|----------------|
+| SSH to the VM, pull this branch, run `./scripts/deploy-stingar-duke-vm.sh` | Run `./scripts/deploy-stingar-demo.sh` on your Mac |
+| Open the **VM URL** in the browser | Expect `localhost` or a laptop Docker stack to change the VM |
+
+Your laptop does **not** need Docker Desktop for the UI demo. Docker on the **VM** builds scanner-lite + patched stingar-ui into the stack that already serves that URL.
+
+## Duke VM (existing STINGAR) — step by step
 
 If STINGAR is already running (e.g. **https://vcm-51366.vm.duke.edu/attack-analysis**), **do not** run the full local Docker demo on your laptop. That only changes your Mac, not the VM.
 
