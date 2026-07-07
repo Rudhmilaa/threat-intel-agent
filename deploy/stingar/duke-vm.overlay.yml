@@ -1,0 +1,48 @@
+# Overlay for an existing Duke STINGAR VM (stock compose + scanner-lite + patched UI + fluentd).
+#
+# Run on the VM from your STINGAR install directory:
+#   export STINGAR_ROOT=~/stingar          # your live compose dir
+#   export SCANNER_LITE_BUILD_CONTEXT=~/ai_tools
+#   cp $SCANNER_LITE_BUILD_CONTEXT/deploy/stingar/fluentd.conf ./fluentd.conf
+#   docker compose -f docker-compose.yml \
+#     -f $SCANNER_LITE_BUILD_CONTEXT/deploy/stingar/duke-vm.overlay.yml \
+#     up -d --build scanner-lite fluentd stingarui
+#
+# Or: ./scripts/deploy-stingar-duke-vm.sh from the ai_tools repo on the VM.
+
+services:
+  scanner-lite:
+    build:
+      context: ${SCANNER_LITE_BUILD_CONTEXT}
+      dockerfile: deploy/stingar/Dockerfile.scanner-lite
+    restart: on-failure
+    ports:
+      - "127.0.0.1:8091:8091"
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      REDIS_URL: redis://redis:6379/0
+      SCANNER_INVENTORY_BACKEND: redis
+      STINGAR_STORAGE_BACKEND: elasticsearch
+      SCANNER_LITE_HOST: 0.0.0.0
+      SCANNER_LITE_PORT: "8091"
+      STINGAR_CLIENT_ID: scanner-lite
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  fluentd:
+    volumes:
+      - ./fluentd.conf:/fluentd/etc/fluent.conf:ro
+    depends_on:
+      scanner-lite:
+        condition: service_healthy
+
+  stingarui:
+    build:
+      context: ${SCANNER_LITE_BUILD_CONTEXT}/vendor/stingar-ui
+      dockerfile: Dockerfile
+      args:
+        VERSION: ${STINGAR_UI_VERSION:-v2.3}
+    image: stingar-stingarui-outcome:latest

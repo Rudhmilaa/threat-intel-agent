@@ -17,6 +17,13 @@ export SCANNER_LITE_URL="${SCANNER_LITE_URL:-http://127.0.0.1:8091}"
 
 log() { echo "[deploy-stingar-demo] $*"; }
 
+if [[ -z "${STINGAR_LOCAL_DEMO_OK:-}" ]]; then
+  log "NOTE: For an existing Duke VM (e.g. vcm-51366.vm.duke.edu), SSH to the VM and run:"
+  log "      ./scripts/deploy-stingar-duke-vm.sh   (see docs/DEMO-DEPLOY.md)"
+  log "      This script is for a full local localhost stack only."
+  echo ""
+fi
+
 check_disk() {
   local avail_kb avail_h
   avail_kb=$(df -k /System/Volumes/Data 2>/dev/null | awk 'NR==2 {print $4}' || df -k / | awk 'NR==2 {print $4}')

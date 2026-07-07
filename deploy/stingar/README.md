@@ -74,7 +74,15 @@ Uses `crane` when available (no Docker daemon required). Re-apply UI patches aft
 
 ## Deploy patched Attack Analysis UI (OUTCOME column)
 
-From repo root on the STINGAR VM:
+**Duke / existing VM** (STINGAR already running — e.g. `vcm-51366.vm.duke.edu`):
+
+```bash
+# SSH to the VM, then:
+export STINGAR_ROOT=~/stingar   # your compose directory
+./scripts/deploy-stingar-duke-vm.sh
+```
+
+**Local full stack** from repo root:
 
 ```bash
 ./scripts/deploy-stingar-ui-vm.sh

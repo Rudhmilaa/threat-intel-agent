@@ -2,7 +2,60 @@
 
 Deploy the **OUTCOME** column demo for collaborators on branch **`scanner-enrichment-lite`**.
 
-> **Disk space:** The full Docker demo (STINGAR UI build + images) needs **≥10 GB free**. If `docker compose build` fails with `input/output error`, free disk first, then run `./scripts/deploy-stingar-demo.sh` again. For a **lighter API-only demo** without the patched UI: `./scripts/deploy-scanner-lite.sh up-native`.
+## Duke VM (existing STINGAR) — use this if you already have a VM
+
+If STINGAR is already running (e.g. **https://vcm-51366.vm.duke.edu/attack-analysis**), **do not** run the full local Docker demo on your laptop. That only changes your Mac, not the VM.
+
+**SSH to the VM**, pull this branch, and run:
+
+```bash
+git clone git@gitlab.oit.duke.edu:codeplus2026/ai_tools.git
+cd ai_tools
+git checkout scanner-enrichment-lite
+
+# Point at your live STINGAR docker-compose directory on the VM:
+export STINGAR_ROOT=~/stingar   # adjust if compose lives elsewhere
+
+./scripts/deploy-stingar-duke-vm.sh
+```
+
+Then open **https://vcm-51366.vm.duke.edu/attack-analysis** and hard-refresh (**Cmd+Shift+R**).
+
+| Step | Where it runs |
+|------|----------------|
+| `deploy-stingar-duke-vm.sh` | **On the Duke VM** (SSH) |
+| Browser | Any machine that can reach the VM URL |
+| `deploy-stingar-demo.sh` | **Local laptop only** — full stack from scratch |
+
+What the Duke script does on the VM:
+
+1. Copies patched `fluentd.conf` (events → scanner-lite, not direct ES)
+2. Starts **scanner-lite** sidecar via `deploy/stingar/duke-vm.overlay.yml`
+3. Rebuilds **stingar-ui** from `vendor/stingar-ui` (OUTCOME column)
+4. Applies ES templates, seeds Redis, posts sample ingest events
+
+**Find your compose dir on the VM:**
+
+```bash
+# on the VM
+docker ps --format '{{.Names}}' | head
+find ~ -name docker-compose.yml 2>/dev/null | head -5
+export STINGAR_ROOT=/path/you/find
+```
+
+**UI-only rebuild** (after pulling new UI code):
+
+```bash
+./scripts/deploy-stingar-duke-vm.sh ui
+```
+
+---
+
+## Local laptop demo (from scratch)
+
+Use this only when you **do not** have a remote STINGAR VM and want everything on `localhost`.
+
+> **Disk space:** The full Docker demo needs **≥10 GB free**. Lighter API-only: `./scripts/deploy-scanner-lite.sh up-native`.
 
 ## What you get
 
@@ -147,25 +200,17 @@ cd deploy/stingar && docker compose ps
 
 Expected UI: **OUTCOME** column between Location and C2; hover shows scanner vendor, CIDR, priority, reasons.
 
-## Existing STINGAR VM (overlay)
+## Existing STINGAR VM (overlay details)
 
-If stock STINGAR already runs elsewhere on the VM:
+Same as [Duke VM](#duke-vm-existing-stingar--use-this-if-you-already-have-a-vm) above. Manual equivalent:
 
 ```bash
-git clone ... && cd ai_tools && git checkout scanner-enrichment-lite
-
-# From your existing STINGAR directory:
-cp /path/to/ai_tools/deploy/stingar/fluentd.conf ./fluentd.conf
+export STINGAR_ROOT=~/stingar
 export SCANNER_LITE_BUILD_CONTEXT=/path/to/ai_tools
-docker compose \
-  -f docker-compose.yml \
-  -f /path/to/ai_tools/deploy/stingar/scanner-lite.overlay.yml \
-  up -d --build scanner-lite fluentd
-
-cd /path/to/ai_tools
-./scripts/deploy-stingar-integration.sh templates
-./scripts/deploy-stingar-integration.sh seed-redis
-STINGAR_DEPLOY_DIR=/path/to/existing/stingar ./scripts/deploy-stingar-ui-vm.sh
+cp "$SCANNER_LITE_BUILD_CONTEXT/deploy/stingar/fluentd.conf" "$STINGAR_ROOT/fluentd.conf"
+docker compose -f "$STINGAR_ROOT/docker-compose.yml" \
+  -f "$SCANNER_LITE_BUILD_CONTEXT/deploy/stingar/duke-vm.overlay.yml" \
+  up -d --build scanner-lite fluentd stingarui
 ```
 
 Open the **VM hostname** in the browser, not `localhost` on your laptop.
@@ -196,7 +241,8 @@ See [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md).
 
 | Script | Purpose |
 |--------|---------|
-| `./scripts/deploy-stingar-demo.sh` | Full local demo (compose + bootstrap + sample events) |
+| `./scripts/deploy-stingar-duke-vm.sh` | **Duke / existing VM** — overlay + UI + bootstrap (run via SSH on VM) |
+| `./scripts/deploy-stingar-demo.sh` | Full **local** demo (compose + bootstrap + sample events) |
 | `./scripts/deploy-stingar-ui-vm.sh` | Rebuild patched UI + core services |
 | `./scripts/deploy-stingar-integration.sh` | Templates, Redis seed, smoke ingest |
 | `./scripts/deploy-scanner-lite.sh` | Lighter stack without full STINGAR UI |
