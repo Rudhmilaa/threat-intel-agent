@@ -2,7 +2,33 @@
 
 Deploy the **OUTCOME** column demo for collaborators on branch **`scanner-enrichment-lite`**.
 
-## If you already have the Duke VM (read this first)
+## Fresh Duke VM via SCP (no Mac Docker)
+
+**Live demo URL:** https://vcm-53767.vm.duke.edu/attack-analysis
+
+From your Mac (only rsync — no local Docker):
+
+```bash
+cd threat-intel-agent-lite
+export DUKE_VM_PASSWORD='your-vm-password'
+export DUKE_VM_HOST='vcm@vcm-53767.vm.duke.edu'
+./scripts/push-to-duke-vm.sh
+```
+
+On the VM this installs Docker (if missing), runs full `deploy/stingar` compose, builds patched **stingar-ui**, seeds scanner inventory, and posts sample ingest events.
+
+**First browser visit:** STINGAR may redirect to **/initial-admin** — complete one-time admin setup, then open **Attack Analysis → Overview** and hard-refresh (**Cmd+Shift+R**). Look for **OUTCOME** between Location and C2.
+
+Verify on the VM:
+
+```bash
+ssh vcm@vcm-53767.vm.duke.edu
+sudo docker ps
+curl -s http://127.0.0.1:8091/health | python3 -m json.tool
+curl -s http://127.0.0.1:9200/stingar-*/_count
+```
+
+---
 
 **Example:** STINGAR is up at **https://vcm-51366.vm.duke.edu/attack-analysis**
 
@@ -31,6 +57,26 @@ export STINGAR_ROOT=~/stingar   # adjust if compose lives elsewhere
 ```
 
 Then open **https://vcm-51366.vm.duke.edu/attack-analysis** and hard-refresh (**Cmd+Shift+R**).
+
+### SSH failing with `Permission denied (publickey)`?
+
+I **cannot** deploy to the VM from your laptop until SSH works. The server is reachable; your `~/.ssh/id_ed25519` is **not** in the VM’s `authorized_keys` yet.
+
+```bash
+./scripts/duke-vm-ssh-setup.sh
+```
+
+**Fix (one time):**
+
+1. **Duke directory** (for future VMs): [Account Self-Service → SSH Public Keys](https://idms-web-selfservice.oit.duke.edu/advanced) — paste `cat ~/.ssh/id_ed25519.pub` → Add Key.
+2. **This VM was already running** — VCM only injects keys at **VM create** time. Open **[vcm.duke.edu](https://vcm.duke.edu)** → your VM → **Console**, log in, append your public key to `~/.ssh/authorized_keys` (commands printed by `duke-vm-ssh-setup.sh`).
+3. Retry: `ssh rh386@vcm-51366.vm.duke.edu`
+
+After SSH works, deploy **on the VM** (not on your Mac):
+
+```bash
+./scripts/deploy-stingar-duke-vm.sh
+```
 
 | Step | Where it runs |
 |------|----------------|
@@ -252,6 +298,8 @@ See [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md).
 
 | Script | Purpose |
 |--------|---------|
+| `./scripts/push-to-duke-vm.sh` | **SCP + bootstrap** on fresh Duke VM (no Mac Docker) |
+| `./scripts/vm-bootstrap-and-deploy.sh` | Run on VM after rsync (Docker + full stack) |
 | `./scripts/deploy-stingar-duke-vm.sh` | **Duke / existing VM** — overlay + UI + bootstrap (run via SSH on VM) |
 | `./scripts/deploy-stingar-demo.sh` | Full **local** demo (compose + bootstrap + sample events) |
 | `./scripts/deploy-stingar-ui-vm.sh` | Rebuild patched UI + core services |
