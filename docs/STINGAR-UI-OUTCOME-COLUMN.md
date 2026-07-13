@@ -9,7 +9,7 @@ This repo indexes session documents to `stingar-*` with the fields below. The pa
 | Current | Target |
 |---------|--------|
 | Column: `effective_severity` (HIGH/MEDIUM/LOW colors) | Column: `outcome_category` (benign / malicious / suspicious / unknown) |
-| Tooltip: threat score / generic signals | Tooltip: scanner vendor, CIDR, behavior tags, priority, reasons, events_today |
+| Tooltip: threat score / generic signals | Popover: scanner metadata + C2 / payload / playbook when present on the session |
 
 One table row = one attack session (`session_id` when present).
 
@@ -62,7 +62,9 @@ export function OutcomeCategoryBadge({ category }: { category: string }) {
 
 ### `OutcomeMetadataTooltip`
 
-Render on hover over the badge or a dedicated info icon:
+Render on hover over the badge:
+
+**Scanner-lite (always when present):**
 
 - **Scanner:** `outcome_summary.scanner_vendor` or `outcome_summary.scanner_attribution`
 - **CIDR:** `outcome_summary.matched_cidr`
@@ -74,7 +76,14 @@ Render on hover over the badge or a dedicated info icon:
 - **Reasons:** `outcome_summary.reasons` (bullet list)
 - **Inventory version:** `outcome_summary.inventory_version`
 
+**C2 / payload / playbook (when stamped on the session — from c2-engine or annotator):**
+
+- **C2 / staging:** `hp_data.enrichment.c2s[]` or `hp_data.enrichment.c2` (value + stage)
+- **Payloads:** `hp_data.enrichment.payloads[]` (sha256, family, kind, status, attempted_url)
+- **Playbook:** `hp_data.enrichment.playbook.name`, `playbook.canonical` (step template), or `playbook_hash` / `exact_key`
+
 Fall back to `hp_data.enrichment.scanner_lite` when `outcome_summary` is absent on older documents.
+Fall back to c2-engine `hp_data.payload_refs`, `hp_data.playbook_hash`, and `hp_data.iocs_c2_hosts` when the annotator stamp is not yet present.
 
 ## API / data source
 
@@ -104,9 +113,9 @@ Patched files in [`vendor/stingar-ui/`](../vendor/stingar-ui/):
 
 | File | Change |
 |------|--------|
-| `components/tables/sessions-table.tsx` | SEVERITY → OUTCOME; C2/PAYLOAD/PLAYBOOK columns preserved |
-| `components/tables/outcome-category-badge.tsx` | 4-category badge + hover Popover |
-| `components/tables/enrichment-columns.ts` | C2/payload/playbook cell helpers |
+| `components/tables/sessions-table.tsx` | SEVERITY → OUTCOME; C2/PAYLOAD/PLAYBOOK moved into outcome popover |
+| `components/tables/outcome-category-badge.tsx` | 4-category badge + hover Popover (scanner + attack intel) |
+| `components/tables/enrichment-columns.ts` | C2/payload/playbook normalization (c2-engine + annotator stamps) |
 | `models/sessions.ts` | `outcome_category`, `outcome_summary` in schema |
 | `lib/actions.ts` | Pass outcome fields through transform |
 
@@ -120,3 +129,10 @@ c2-engine Attack Analysis prototype (`c2-engine/prototype/` on the `c2-engine` b
 2. Confirm UI row shows green `benign` badge.
 3. Hover shows vendor `Palo Alto Networks Cortex Xpanse` and matched CIDR.
 4. PeopleSoft probe IP (`52.29.178.95`) → `suspicious` with `peoplesoft_probe` in behavior tags.
+5. c2-engine session (`185.196.8.22` with `payload_refs` / `playbook_canonical`) → hover OUTCOME shows **C2 / staging**, **Payloads**, and **Playbook** inside the popover (no separate table columns).
+
+Demo ingest on the VM:
+
+```bash
+./scripts/demo-ingest-screenshot.sh
+```

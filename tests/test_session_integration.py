@@ -119,6 +119,74 @@ class TestSessionDocument(unittest.TestCase):
         self.assertEqual(session["threat"]["severity"], "LOW")
         self.assertIn("scanner:censys", session["taxonomy"]["tags"])
 
+    def test_preserves_c2_engine_enrichment_from_event(self):
+        event = {
+            **PEOPLESOFT_EVENT,
+            "c2_host": ["1.2.3.4"],
+            "hpData": {
+                **PEOPLESOFT_EVENT["hpData"],
+                "playbook_hash": "pb:9f2c41deadbeef",
+                "payload_refs": [
+                    {
+                        "sha256": "af3c9b1e2ed02578ca1066c8235ba4f991e645f89012406c639dbccc6582eec8",
+                        "status": "ok",
+                    }
+                ],
+                "enrichment": {
+                    "version": "mvp-1",
+                    "c2s": [{"ip": "1.2.3.4", "stage": "served_bytes", "url": "http://1.2.3.4/x.sh"}],
+                    "payloads": [
+                        {
+                            "sha256": "af3c9b1e2ed02578ca1066c8235ba4f991e645f89012406c639dbccc6582eec8",
+                            "family": "mirai",
+                        }
+                    ],
+                    "playbook_hash": "pb:9f2c41deadbeef",
+                    "signals": ["c2_attack", "novel_payload"],
+                },
+            },
+        }
+        session = to_stingar_session(ENRICHED_DOC, event)
+        enc = session["hp_data"]["enrichment"]
+        self.assertEqual(enc["version"], "mvp-1")
+        self.assertEqual(enc["signals"], ["c2_attack", "novel_payload"])
+        self.assertEqual(enc["c2s"][0]["ip"], "1.2.3.4")
+        self.assertEqual(enc["payloads"][0]["family"], "mirai")
+        self.assertEqual(enc["playbook_hash"], "pb:9f2c41deadbeef")
+        self.assertIn("scanner_lite", enc)
+        self.assertEqual(session["hp_data"]["playbook_hash"], "pb:9f2c41deadbeef")
+
+    def test_lifts_c2_engine_fields_without_annotator_stamp(self):
+        event = {
+            **PEOPLESOFT_EVENT,
+            "c2_host": ["185.196.8.22"],
+            "hpData": {
+                **PEOPLESOFT_EVENT["hpData"],
+                "iocs_c2_hosts": ["185.196.8.22"],
+                "playbook_hash": "9f2c41deadbeef9f2c41deadbeef9f2c41de",
+                "playbook_canonical": "wget <URL> -o <TMP>\nchmod +x <TMP>",
+                "payload_refs": [
+                    {
+                        "kind": "download",
+                        "sha256": "af3c9b1e2ed02578ca1066c8235ba4f991e645f89012406c639dbccc6582eec8",
+                        "status": "ok",
+                        "attempted_url": "http://185.196.8.22/armv7l",
+                    }
+                ],
+            },
+        }
+        session = to_stingar_session(ENRICHED_DOC, event)
+        enc = session["hp_data"]["enrichment"]
+        self.assertEqual(enc["c2s"][0]["ip"], "185.196.8.22")
+        self.assertEqual(enc["payloads"][0]["sha256"], "af3c9b1e2ed02578ca1066c8235ba4f991e645f89012406c639dbccc6582eec8")
+        self.assertEqual(enc["payloads"][0]["kind"], "download")
+        self.assertEqual(enc["payloads"][0]["status"], "ok")
+        self.assertEqual(enc["payloads"][0]["attempted_url"], "http://185.196.8.22/armv7l")
+        self.assertEqual(enc["playbook_hash"], "9f2c41deadbeef9f2c41deadbeef9f2c41de")
+        self.assertEqual(enc["playbook"]["exact_key"], "9f2c41deadbeef9f2c41deadbeef9f2c41de")
+        self.assertEqual(enc["playbook"]["canonical"], "wget <URL> -o <TMP>\nchmod +x <TMP>")
+        self.assertEqual(session["hp_data"]["playbook_canonical"], "wget <URL> -o <TMP>\nchmod +x <TMP>")
+
 
 class TestIpHistoryFrequency(unittest.TestCase):
     def test_events_today_drives_frequency_not_batch_only(self):

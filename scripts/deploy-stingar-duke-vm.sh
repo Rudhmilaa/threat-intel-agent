@@ -7,12 +7,12 @@
 #   export STINGAR_ROOT=/path/to/your/stingar/compose
 #   ./scripts/deploy-stingar-duke-vm.sh
 #
-# Then open: https://vcm-51366.vm.duke.edu/attack-analysis (hard refresh)
+# Then open: https://vcm-51366.vm.duke.edu/sessions (hard refresh)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 STINGAR_ROOT="${STINGAR_ROOT:-}"
-DUKE_UI_URL="${DUKE_UI_URL:-https://vcm-51366.vm.duke.edu/attack-analysis}"
+DUKE_UI_URL="${DUKE_UI_URL:-https://vcm-51366.vm.duke.edu/sessions}"
 OVERLAY="$ROOT/deploy/stingar/duke-vm.overlay.yml"
 PYTHON="${PYTHON:-$ROOT/.venv-demo/bin/python}"
 
@@ -33,7 +33,7 @@ Required:
   export STINGAR_ROOT=/path/to/existing/stingar/docker-compose/dir
 
 Optional:
-  DUKE_UI_URL=https://vcm-51366.vm.duke.edu/attack-analysis
+  DUKE_UI_URL=https://vcm-51366.vm.duke.edu/sessions
 
 Commands:
   full       overlay + bootstrap + demo ingest (default)
@@ -116,13 +116,11 @@ bootstrap() {
 }
 
 demo_ingest() {
-  curl -fsS -X POST "$SCANNER_LITE_URL/ingest/fluentd" \
-    -H "Content-Type: application/json" \
-    -d '{"srcIp":"198.235.24.10","app":"web","hpData":{"eventType":"service_probe"}}' >/dev/null || true
-  curl -fsS -X POST "$SCANNER_LITE_URL/ingest/fluentd" \
-    -H "Content-Type: application/json" \
-    -d '{"app":"peoplesoft","srcIp":"52.29.178.95","hpData":{"method":"HEAD","path":"/ps/signon.html","eventType":"peoplesoft-scan"}}' >/dev/null || true
-  log "Demo ingest posted"
+  chmod +x "$ROOT/scripts/demo-ingest-screenshot.sh"
+  STINGAR_UI_URL="${DUKE_UI_URL%/sessions}/sessions" \
+    SCANNER_LITE_URL="$SCANNER_LITE_URL" \
+    ELASTICSEARCH_URL="$ELASTICSEARCH_URL" \
+    "$ROOT/scripts/demo-ingest-screenshot.sh"
 }
 
 ui_only() {
@@ -145,7 +143,7 @@ Duke VM deploy finished.
     $DUKE_UI_URL
 
   Hard refresh: Cmd+Shift+R / Ctrl+Shift+R
-  Look for OUTCOME column between Location and C2.
+  OUTCOME column replaces SEVERITY; hover shows scanner metadata plus C2/payload/playbook when present.
 
   On the VM:
     curl -s $SCANNER_LITE_URL/health | python3 -m json.tool

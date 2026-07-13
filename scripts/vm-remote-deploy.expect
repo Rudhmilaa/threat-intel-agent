@@ -1,0 +1,70 @@
+#!/usr/bin/expect -f
+# Usage: VM_PASS='your-password' expect scripts/vm-remote-deploy.expect [install|deploy|status]
+# Runs on Duke VM only — does not install Docker on your Mac.
+
+set timeout 1800
+if {![info exists env(VM_PASS)] || $env(VM_PASS) eq ""} {
+    puts stderr "Set VM_PASS environment variable."
+    exit 1
+}
+set pass $env(VM_PASS)
+set user [expr {[info exists env(VM_USER)] && $env(VM_USER) ne "" ? $env(VM_USER) : "rh386"}]
+set vm [expr {[info exists env(VM_HOST)] && $env(VM_HOST) ne "" ? $env(VM_HOST) : "vcm-51366.vm.duke.edu"}]
+set host "${user}@${vm}"
+set phase [lindex $argv 0]
+if {$phase eq ""} { set phase "full" }
+
+proc ssh_cmd {host pass remote} {
+    global timeout
+    spawn ssh -o StrictHostKeyChecking=accept-new $host $remote
+    expect {
+        -re "(?i)password:" { send "$pass\r"; exp_continue }
+        -re {\[sudo\] password} { send "$pass\r"; exp_continue }
+        eof
+    }
+    catch wait result
+    return [lindex $result 3]
+}
+
+if {$phase eq "status" || $phase eq "full"} {
+    puts "=== VM status ==="
+    ssh_cmd $host $pass {bash -lc 'hostname; df -h / | tail -1; command -v docker || true; sudo docker ps 2>/dev/null | head -8 || docker ps 2>/dev/null | head -8 || true'}
+}
+
+if {$phase eq "install" || $phase eq "full"} {
+    puts "=== Installing Docker on VM ==="
+    set rc [ssh_cmd $host $pass {bash -lc 'set -e
+if command -v docker >/dev/null 2>&1; then echo docker_already_installed; exit 0; fi
+sudo apt-get update -qq
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y docker.io docker-compose-v2 curl openssl python3 python3-venv python3-pip ca-certificates
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+sudo docker version'}]
+    if {$rc != 0} { exit $rc }
+}
+
+if {$phase eq "deploy" || $phase eq "full"} {
+    puts "=== Deploying STINGAR + OUTCOME UI on VM ==="
+    set rc [ssh_cmd $host $pass {bash -lc 'set -e
+cd ~/threat-intel-agent-lite
+export STINGAR_LOCAL_DEMO_OK=1
+export STINGAR_DEPLOY_DIR=$HOME/threat-intel-agent-lite/deploy/stingar
+export DUKE_UI_URL=https://vcm-51366.vm.duke.edu/sessions
+chmod +x scripts/*.sh scripts/lib/*.sh 2>/dev/null || true
+for d in "$HOME/stingar" "$HOME/Desktop/stingar" /opt/stingar /srv/stingar; do
+  if [ -f "$d/docker-compose.yml" ]; then export STINGAR_ROOT="$d"; break; fi
+done
+if [ -z "${STINGAR_ROOT:-}" ] || [ ! -f "$STINGAR_ROOT/docker-compose.yml" ]; then
+  echo "Set STINGAR_ROOT to your running STINGAR compose directory" >&2
+  exit 1
+fi
+./scripts/deploy-stingar-duke-vm.sh full
+echo DEPLOY_DONE'}]
+    if {$rc != 0} { exit $rc }
+}
+
+puts ""
+puts "================================================================================"
+puts "Open: https://vcm-51366.vm.duke.edu/sessions"
+puts "Hard refresh (Cmd+Shift+R). OUTCOME popover shows scanner + payload/playbook intel."
+puts "================================================================================"

@@ -3,14 +3,21 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-VM_HOST="${DUKE_VM_HOST:-vcm@vcm-53767.vm.duke.edu}"
+VM_HOST="${DUKE_VM_HOST:-rh386@vcm-51366.vm.duke.edu}"
 REMOTE_DIR="${DUKE_VM_DIR:-~/threat-intel-agent-lite}"
+DEPLOY_MODE="${DUKE_DEPLOY_MODE:-overlay}"
+UI_URL="${DUKE_UI_URL:-https://vcm-51366.vm.duke.edu/sessions}"
 
 log() { echo "[push-to-duke-vm] $*"; }
 
-if [[ -z "${DUKE_VM_PASSWORD:-}" ]]; then
-  echo "Set DUKE_VM_PASSWORD for password SSH, or configure SSH keys." >&2
-  echo "Example: DUKE_VM_PASSWORD='...' $0" >&2
+USE_PASSWORD=0
+if [[ -n "${DUKE_VM_PASSWORD:-}" ]]; then
+  USE_PASSWORD=1
+  export VM_PASS="$DUKE_VM_PASSWORD"
+elif ! ssh -o BatchMode=yes -o ConnectTimeout=10 "$VM_HOST" "echo ok" >/dev/null 2>&1; then
+  echo "SSH to $VM_HOST failed. Either:" >&2
+  echo "  1) Add your public key on the VM (./scripts/duke-vm-ssh-setup.sh), or" >&2
+  echo "  2) DUKE_VM_PASSWORD='...' $0" >&2
   exit 1
 fi
 
@@ -19,11 +26,20 @@ if ! command -v expect >/dev/null 2>&1; then
   exit 1
 fi
 
-log "Syncing $ROOT -> $VM_HOST:$REMOTE_DIR"
-export VM_PASS="$DUKE_VM_PASSWORD"
-export VM_HOST REMOTE_DIR SRC="$ROOT/"
+RSYNC_EXCLUDES=(
+  --exclude ".venv*"
+  --exclude ".git"
+  --exclude "__pycache__"
+  --exclude ".run"
+  --exclude "vendor/stingar-ui/node_modules"
+  --exclude "vendor/stingar-ui/.next"
+  --exclude "deploy/stingar/storage"
+)
 
-expect <<'EXPECT'
+log "Syncing $ROOT -> $VM_HOST:$REMOTE_DIR"
+if [[ "$USE_PASSWORD" -eq 1 ]]; then
+  export VM_HOST REMOTE_DIR SRC="$ROOT/"
+  expect <<'EXPECT'
 set timeout 600
 set pass $env(VM_PASS)
 set host $env(VM_HOST)
@@ -46,15 +62,29 @@ expect {
   eof
 }
 EXPECT
+else
+  rsync -avz "${RSYNC_EXCLUDES[@]}" \
+    -e "ssh -o StrictHostKeyChecking=accept-new" \
+    "$ROOT/" "$VM_HOST:$REMOTE_DIR/"
+fi
 
-log "Running bootstrap on VM (Docker install + compose + OUTCOME UI)..."
-expect <<'EXPECT'
+if [[ "$DEPLOY_MODE" == "overlay" ]]; then
+  REMOTE_CMD="chmod +x $REMOTE_DIR/scripts/*.sh $REMOTE_DIR/scripts/lib/*.sh 2>/dev/null; cd $REMOTE_DIR && DUKE_UI_URL='$UI_URL' ./scripts/deploy-stingar-duke-vm.sh full"
+  log "Running overlay deploy on existing STINGAR (deploy-stingar-duke-vm.sh)..."
+else
+  REMOTE_CMD="chmod +x $REMOTE_DIR/scripts/vm-bootstrap-and-deploy.sh && $REMOTE_DIR/scripts/vm-bootstrap-and-deploy.sh"
+  log "Running full VM bootstrap (new Docker stack)..."
+fi
+
+if [[ "$USE_PASSWORD" -eq 1 ]]; then
+  export REMOTE_CMD
+  expect <<'EXPECT'
 set timeout 3600
 set pass $env(VM_PASS)
 set host $env(VM_HOST)
-set dst $env(REMOTE_DIR)
+set cmd $env(REMOTE_CMD)
 
-spawn ssh -o StrictHostKeyChecking=accept-new $host "chmod +x $dst/scripts/vm-bootstrap-and-deploy.sh && $dst/scripts/vm-bootstrap-and-deploy.sh"
+spawn ssh -o StrictHostKeyChecking=accept-new $host $cmd
 
 expect {
   -re "(?i)password:" { send "$pass\r"; exp_continue }
@@ -62,5 +92,8 @@ expect {
   eof
 }
 EXPECT
+else
+  ssh -o StrictHostKeyChecking=accept-new "$VM_HOST" "$REMOTE_CMD"
+fi
 
-log "Done. Open: https://vcm-53767.vm.duke.edu/attack-analysis"
+log "Done. Open: $UI_URL"

@@ -42,6 +42,7 @@ export const SessionSchema = z.object({
         tags: {}
     }),
     hpData: z.record(z.any()).default({}),
+    c2_host: z.union([z.string(), z.array(z.string())]).optional(),
     outcome_category: z.string().optional(),
     outcome_summary: z.record(z.any()).optional(),
     // Geo fields extracted from hpData for easier access
@@ -84,6 +85,7 @@ export type Session = {
         tags: object;
     };
     hpData: object;
+    c2_host?: string | string[];
     outcome_category?: string;
     outcome_summary?: Record<string, unknown>;
     geoData: {

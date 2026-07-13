@@ -1,7 +1,8 @@
 "use client";
 
 import { useId, useState } from "react";
-import { Popover, Typography, Box } from "@mui/material";
+import { Popover, Typography, Box, Divider } from "@mui/material";
+import { hasAttackIntel, payloadDetailValue, sessionEnrichmentView } from "./enrichment-columns";
 
 const OUTCOME_COLORS: Record<string, string> = {
   benign: "#3d751c",
@@ -75,9 +76,20 @@ function MetadataRow({ label, value }: { label: string; value?: string | number 
   );
 }
 
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mt: 1, mb: 0.5, color: "text.secondary" }}>
+      {children}
+    </Typography>
+  );
+}
+
+
 export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) {
   const category = resolveCategory(row);
   const summary = resolveSummary(row);
+  const attackIntel = sessionEnrichmentView(row);
+  const showAttackIntel = hasAttackIntel(row);
   const color = OUTCOME_COLORS[category] ?? OUTCOME_COLORS.unknown;
   const popoverId = useId();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
@@ -113,7 +125,7 @@ export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) 
         sx={{ pointerEvents: "none" }}
         slotProps={{
           paper: {
-            sx: { pointerEvents: "auto", p: 1.5, maxWidth: 360 },
+            sx: { pointerEvents: "auto", p: 1.5, maxWidth: showAttackIntel ? 420 : 360 },
             onMouseEnter: () => anchorEl && setAnchorEl(anchorEl),
             onMouseLeave: closePopover,
           },
@@ -138,6 +150,53 @@ export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) 
           value={summary.reasons?.length ? summary.reasons.join("; ") : undefined}
         />
         <MetadataRow label="Inventory" value={summary.inventory_version != null ? `v${summary.inventory_version}` : undefined} />
+
+        {showAttackIntel && (
+          <>
+            <Divider sx={{ my: 1 }} />
+            {attackIntel.c2.length > 0 && (
+              <>
+                <SectionTitle>C2 / staging</SectionTitle>
+                {attackIntel.c2.map((entry, index) => (
+                  <MetadataRow
+                    key={`c2-${index}`}
+                    label={attackIntel.c2.length > 1 ? `C2 ${index + 1}` : "C2"}
+                    value={entry.stage ? `${entry.value} (${entry.stage})` : entry.value}
+                  />
+                ))}
+              </>
+            )}
+            {attackIntel.payloads.length > 0 && (
+              <>
+                <SectionTitle>Payloads</SectionTitle>
+                {attackIntel.payloads.map((entry, index) => (
+                  <Box key={`payload-${index}`}>
+                    <MetadataRow
+                      label={attackIntel.payloads.length > 1 ? `Payload ${index + 1}` : "Payload"}
+                      value={payloadDetailValue(entry)}
+                    />
+                    {entry.attempted_url && (
+                      <MetadataRow label="URL" value={entry.attempted_url} />
+                    )}
+                  </Box>
+                ))}
+              </>
+            )}
+            {(attackIntel.playbook?.name || attackIntel.playbook?.exact_key || attackIntel.playbook?.canonical) && (
+              <>
+                <SectionTitle>Playbook</SectionTitle>
+                <MetadataRow label="Name" value={attackIntel.playbook?.name} />
+                {attackIntel.playbook?.canonical && (
+                  <MetadataRow
+                    label="Steps"
+                    value={attackIntel.playbook.canonical.replace(/\n/g, " → ")}
+                  />
+                )}
+                <MetadataRow label="Key" value={attackIntel.playbook?.exact_key} />
+              </>
+            )}
+          </>
+        )}
       </Popover>
     </>
   );

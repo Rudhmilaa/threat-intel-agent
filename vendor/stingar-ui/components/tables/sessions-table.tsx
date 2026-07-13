@@ -5,13 +5,6 @@ import { useSessions } from "../hooks/hooks";
 import { useRouter } from "next/navigation";
 import { formatLocationWithFlag } from "@/lib/geo-utils";
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import {
-  c2Display,
-  payloadDisplay,
-  payloadTooltip,
-  playbookDisplay,
-  playbookTooltip,
-} from "./enrichment-columns";
 import { getOutcomeSortValue, OutcomeCategoryBadge } from "./outcome-category-badge";
 import { useHighZoom, useVeryHighZoom } from "../hooks/use-zoom-level";
 import { useViewportSize } from "../hooks/use-viewport";
@@ -178,51 +171,6 @@ const getColumns = (isHighZoom: boolean, isVeryHighZoom: boolean, viewportSize: 
         <div className="flex items-center h-full">
           <OutcomeCategoryBadge row={params.row} />
         </div>
-      ),
-    },
-    {
-      field: "c2_enrichment",
-      headerName: "C2",
-      flex: 0.6,
-      minWidth: getMinWidth(70, 60, 50, 45),
-      headerAlign: "left",
-      align: "left",
-      sortable: false,
-      valueGetter: (_value, row) => c2Display(row),
-      renderCell: (params) => (
-        <Tooltip title={params.value !== "—" ? String(params.value) : ""} arrow placement="top">
-          <span className="truncate">{params.value}</span>
-        </Tooltip>
-      ),
-    },
-    {
-      field: "payload_enrichment",
-      headerName: isVeryHighZoom ? "PAY" : "PAYLOAD",
-      flex: 0.7,
-      minWidth: getMinWidth(80, 70, 55, 50),
-      headerAlign: "left",
-      align: "left",
-      sortable: false,
-      valueGetter: (_value, row) => payloadDisplay(row),
-      renderCell: (params) => (
-        <Tooltip title={payloadTooltip(params.row)} arrow placement="top">
-          <span className="truncate font-mono text-xs">{params.value}</span>
-        </Tooltip>
-      ),
-    },
-    {
-      field: "playbook_enrichment",
-      headerName: isVeryHighZoom ? "PLAY" : "PLAYBOOK",
-      flex: 0.8,
-      minWidth: getMinWidth(90, 75, 60, 55),
-      headerAlign: "left",
-      align: "left",
-      sortable: false,
-      valueGetter: (_value, row) => playbookDisplay(row),
-      renderCell: (params) => (
-        <Tooltip title={playbookTooltip(params.row)} arrow placement="top">
-          <span className="truncate text-blue-600">{params.value}</span>
-        </Tooltip>
       ),
     },
   ];

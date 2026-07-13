@@ -546,6 +546,7 @@ function transformSessionData(apiSession: any) {
         },
         hpData: hpData,
         geoData: geoData,
+        c2_host: apiSession.c2_host ?? apiSession.c2Host ?? undefined,
         outcome_category:
             apiSession.outcome_category ||
             apiSession.outcomeCategory ||
