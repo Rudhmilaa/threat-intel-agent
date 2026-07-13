@@ -15,9 +15,24 @@ ensure_repo() {
     log "Using existing repo at $REPO_DIR"
     return 0
   fi
-  log "Cloning $GIT_URL (branch $GIT_BRANCH) -> $REPO_DIR"
-  rm -rf "$REPO_DIR"
-  git clone --depth 1 --branch "$GIT_BRANCH" "$GIT_URL" "$REPO_DIR"
+  local tarball="${REPO_TARBALL:-$HOME/threat-intel-agent-lite-51366.tgz}"
+  if [[ -f "$tarball" ]]; then
+    log "Extracting $tarball -> $REPO_DIR"
+    rm -rf "$REPO_DIR"
+    mkdir -p "$REPO_DIR"
+    tar xzf "$tarball" -C "$REPO_DIR" --strip-components=0
+    return 0
+  fi
+  if command -v git >/dev/null 2>&1 && git ls-remote "$GIT_URL" "$GIT_BRANCH" >/dev/null 2>&1; then
+    log "Cloning $GIT_URL (branch $GIT_BRANCH) -> $REPO_DIR"
+    rm -rf "$REPO_DIR"
+    git clone --depth 1 --branch "$GIT_BRANCH" "$GIT_URL" "$REPO_DIR"
+    return 0
+  fi
+  echo "ERROR: No repo at $REPO_DIR. Either:" >&2
+  echo "  scp threat-intel-agent-lite-51366.tgz rh386@vcm-51366.vm.duke.edu:~/" >&2
+  echo "  or git clone $GIT_URL (branch $GIT_BRANCH)" >&2
+  exit 1
 }
 
 find_stingar_root() {
