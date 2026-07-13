@@ -2,6 +2,7 @@
 .venv/
 .venv-1/
 .run/
+dist/
 __pycache__/
 threat_report.json
 .stingar_seen_ips.json
