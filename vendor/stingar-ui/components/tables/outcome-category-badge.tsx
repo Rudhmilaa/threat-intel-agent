@@ -2,14 +2,12 @@
 
 import { useId, useState } from "react";
 import { Popover, Typography, Box, Divider } from "@mui/material";
+import {
+  GithubIssueLabel,
+  GithubIssueLabelList,
+  outcomeTone,
+} from "@/components/github-issue-label";
 import { hasAttackIntel, payloadDetailValue, sessionEnrichmentView } from "./enrichment-columns";
-
-const OUTCOME_COLORS: Record<string, string> = {
-  benign: "#3d751c",
-  malicious: "#bd271e",
-  suspicious: "#f5a700",
-  unknown: "#646a73",
-};
 
 export type OutcomeSummary = {
   scanner_vendor?: string;
@@ -76,6 +74,26 @@ function MetadataRow({ label, value }: { label: string; value?: string | number 
   );
 }
 
+function MetadataRowLabels({
+  label,
+  items,
+  tone = "neutral",
+}: {
+  label: string;
+  items: string[];
+  tone?: "benign" | "malicious" | "suspicious" | "unknown" | "neutral" | "blue" | "purple";
+}) {
+  if (!items.length) return null;
+  return (
+    <Box sx={{ display: "flex", gap: 1, py: 0.25, alignItems: "flex-start" }}>
+      <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 110, color: "text.secondary", pt: 0.25 }}>
+        {label}
+      </Typography>
+      <GithubIssueLabelList items={items} tone={tone} />
+    </Box>
+  );
+}
+
 function SectionTitle({ children }: { children: string }) {
   return (
     <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mt: 1, mb: 0.5, color: "text.secondary" }}>
@@ -84,13 +102,12 @@ function SectionTitle({ children }: { children: string }) {
   );
 }
 
-
 export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) {
   const category = resolveCategory(row);
   const summary = resolveSummary(row);
   const attackIntel = sessionEnrichmentView(row);
   const showAttackIntel = hasAttackIntel(row);
-  const color = OUTCOME_COLORS[category] ?? OUTCOME_COLORS.unknown;
+  const tone = outcomeTone(category);
   const popoverId = useId();
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -101,18 +118,19 @@ export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) 
   return (
     <>
       <span
-        role="button"
+        role="status"
         tabIndex={0}
+        aria-label={`Outcome: ${category}`}
         aria-describedby={open ? popoverId : undefined}
-        className="inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold uppercase text-white cursor-default"
-        style={{ backgroundColor: color }}
+        className="inline-block max-w-full focus:outline-none focus-visible:rounded-full focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#0969da]"
         onMouseEnter={(e) => openPopover(e.currentTarget)}
         onMouseLeave={closePopover}
         onFocus={(e) => openPopover(e.currentTarget)}
         onBlur={closePopover}
-        onClick={(e) => openPopover(e.currentTarget)}
       >
-        {category}
+        <GithubIssueLabel tone={tone} className="capitalize">
+          {category}
+        </GithubIssueLabel>
       </span>
       <Popover
         id={popoverId}
@@ -131,20 +149,29 @@ export function OutcomeCategoryBadge({ row }: { row: Record<string, unknown> }) 
           },
         }}
       >
-        <Typography variant="subtitle2" sx={{ mb: 1, textTransform: "capitalize" }}>
-          Outcome: {category}
-        </Typography>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+          <Typography variant="caption" sx={{ fontWeight: 600, color: "text.secondary" }}>
+            Outcome
+          </Typography>
+          <GithubIssueLabel tone={tone} className="capitalize">
+            {category}
+          </GithubIssueLabel>
+        </Box>
         <MetadataRow label="Scanner" value={summary.scanner_vendor} />
         <MetadataRow label="Attribution" value={summary.scanner_attribution} />
         <MetadataRow label="CIDR" value={summary.matched_cidr} />
         <MetadataRow label="Classification" value={summary.classification} />
-        <MetadataRow label="Priority" value={summary.priority} />
+        {summary.priority ? (
+          <Box sx={{ display: "flex", gap: 1, py: 0.25, alignItems: "center" }}>
+            <Typography variant="caption" sx={{ fontWeight: 600, minWidth: 110, color: "text.secondary" }}>
+              Priority
+            </Typography>
+            <GithubIssueLabel tone="blue">{summary.priority}</GithubIssueLabel>
+          </Box>
+        ) : null}
         <MetadataRow label="Frequency" value={summary.frequency_tier} />
         <MetadataRow label="Events today" value={summary.events_today} />
-        <MetadataRow
-          label="Behavior"
-          value={summary.behavior_tags?.length ? summary.behavior_tags.join(", ") : undefined}
-        />
+        <MetadataRowLabels label="Behavior" items={summary.behavior_tags ?? []} tone="purple" />
         <MetadataRow
           label="Reasons"
           value={summary.reasons?.length ? summary.reasons.join("; ") : undefined}

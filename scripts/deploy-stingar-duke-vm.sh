@@ -51,6 +51,8 @@ find_stingar_root() {
     return 0
   fi
   for candidate in \
+    "$ROOT/deploy/stingar" \
+    "$HOME/threat-intel-agent-lite/deploy/stingar" \
     "$HOME/stingar" \
     "$HOME/Desktop/stingar" \
     "/opt/stingar" \
@@ -94,8 +96,12 @@ overlay_deploy() {
     exit 1
   fi
   export SCANNER_LITE_BUILD_CONTEXT="$ROOT"
-  log "Installing patched fluentd.conf into $STINGAR_ROOT"
-  cp "$ROOT/deploy/stingar/fluentd.conf" "$STINGAR_ROOT/fluentd.conf"
+  if [[ "$(cd "$ROOT/deploy/stingar" && pwd)" != "$(cd "$STINGAR_ROOT" && pwd)" ]]; then
+    log "Installing patched fluentd.conf into $STINGAR_ROOT"
+    cp "$ROOT/deploy/stingar/fluentd.conf" "$STINGAR_ROOT/fluentd.conf"
+  else
+    log "STINGAR_ROOT is repo deploy/stingar — fluentd.conf already in place"
+  fi
   log "Building scanner-lite + stingarui and restarting fluentd..."
   (
     cd "$STINGAR_ROOT"

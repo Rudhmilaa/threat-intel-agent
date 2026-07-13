@@ -31,25 +31,27 @@ curl -fsS -X POST "${SCANNER_LITE_URL}/ingest/fluentd" \
 echo
 
 log "Posting c2-engine style cowrie session with payload + playbook (185.196.8.22)..."
+# Use ES-mapped enrichment shape (c2/payloads/playbook objects). Arrays like c2s or
+# top-level payload_refs fail strict stingar-* mapping unless the template is extended.
 curl -fsS -X POST "${SCANNER_LITE_URL}/ingest/fluentd" \
   -H "Content-Type: application/json" \
   -d '{
     "srcIp":"185.196.8.22",
     "app":"cowrie",
-    "c2_host":["185.196.8.22"],
     "hpData":{
       "eventType":"cowrie.session",
-      "iocs_c2_hosts":["185.196.8.22"],
-      "playbook_hash":"9f2c41deadbeef9f2c41deadbeef9f2c41de",
-      "playbook_canonical":"wget <URL> -o <TMP>\nchmod +x <TMP>\n./<TMP>",
-      "payload_refs":[
-        {
-          "kind":"download",
+      "enrichment":{
+        "version":"mvp-1",
+        "c2":{"value":"http://185.196.8.22/armv7l","stage":"served_bytes"},
+        "payloads":{
           "sha256":"af3c9b1e2ed02578ca1066c8235ba4f991e645f89012406c639dbccc6582eec8",
-          "status":"ok",
-          "attempted_url":"http://185.196.8.22/armv7l"
+          "family":"mirai"
+        },
+        "playbook":{
+          "exact_key":"9f2c41deadbeef9f2c41deadbeef9f2c41de",
+          "name":"wget-chmod-exec"
         }
-      ]
+      }
     }
   }'
 echo
