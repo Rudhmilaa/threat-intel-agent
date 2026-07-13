@@ -7,11 +7,19 @@ set -euo pipefail
 export DUKE_UI_URL="${DUKE_UI_URL:-https://vcm-51366.vm.duke.edu/sessions}"
 export REPO_TARBALL="${REPO_TARBALL:-$HOME/threat-intel-agent-lite-51366.tgz}"
 export REPO_DIR="${REPO_DIR:-$HOME/threat-intel-agent-lite}"
+MAC_HTTP_BASE="${MAC_HTTP_BASE:-}"
+
+if [[ ! -f "$REPO_TARBALL" && -n "$MAC_HTTP_BASE" ]]; then
+  echo "Fetching tarball from $MAC_HTTP_BASE ..."
+  curl -fSL "${MAC_HTTP_BASE%/}/threat-intel-agent-lite-51366.tgz" -o "$REPO_TARBALL"
+fi
 
 if [[ ! -f "$REPO_TARBALL" ]]; then
   echo "Missing $REPO_TARBALL"
   echo "From your Mac (same network/VPN), after HTTP server is running:"
-  echo "  curl -fO http://YOUR_MAC_IP:18888/threat-intel-agent-lite-51366.tgz"
+  echo "  export MAC_HTTP_BASE=http://YOUR_MAC_IP:18888"
+  echo "  curl -fO \$MAC_HTTP_BASE/threat-intel-agent-lite-51366.tgz"
+  echo "Or: MAC_HTTP_BASE=http://YOUR_MAC_IP:18888 bash $0"
   exit 1
 fi
 
