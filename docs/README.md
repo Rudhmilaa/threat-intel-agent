@@ -6,12 +6,13 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 ### Scanner enrichment lite (`scanner-enrichment-lite` branch)
 
-1. **[SCANNER-LITE.md](./SCANNER-LITE.md)** — quick start, API, demo IPs
-2. **[DEMO-DEPLOY.md](./DEMO-DEPLOY.md)** — **start here for demos** (one-command deploy, full/lite/native paths)
-3. **[SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)** — end-to-end demo script (curl, session integration, Kibana)
-4. **[SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)** — system design, module map, mermaid diagrams
-5. **[CODE_REVIEW.md](./CODE_REVIEW.md)** — reviewer checklist and verification script
-6. **[API-CASCADE.md](./API-CASCADE.md)** — endpoint eval, ranking, cost model
+1. **[BOSS-GUIDE.md](./BOSS-GUIDE.md)** — **start here for stakeholders** (what it is, demo, test, STINGAR integration)
+2. **[DEMO-DEPLOY.md](./DEMO-DEPLOY.md)** — one-command deploy, full/lite/native, Duke VM
+3. **[SCANNER-LITE.md](./SCANNER-LITE.md)** — quick start, API, demo IPs
+4. **[SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md)** — end-to-end demo script (curl, session integration, Kibana)
+5. **[SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md)** — system design, module map, mermaid diagrams
+6. **[CODE_REVIEW.md](./CODE_REVIEW.md)** — reviewer checklist and verification script
+7. **[API-CASCADE.md](./API-CASCADE.md)** — endpoint eval, ranking, cost model
 
 ### Full hybrid platform (`threat-enrich-agent` branch)
 
@@ -28,6 +29,7 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 | Document | Covers |
 |---|---|
+| [BOSS-GUIDE.md](./BOSS-GUIDE.md) | **Stakeholder walkthrough** — demo, test, integrate into STINGAR |
 | [DEMO-DEPLOY.md](./DEMO-DEPLOY.md) | **Collaborator demo deploy** (one script, full/lite/native, troubleshooting) |
 | [SCANNER-LITE.md](./SCANNER-LITE.md) | Quick start, API, demo, session integration |
 | [SCANNER-LITE-DEMO.md](./SCANNER-LITE-DEMO.md) | Full end-to-end demo walkthrough and copy-paste script |
@@ -47,11 +49,13 @@ Technical documentation for **threat-intel-agent** — a hybrid local/global STI
 
 | Document | Audience |
 |---|---|
+| [BOSS-GUIDE.md](./BOSS-GUIDE.md) | Manager / lead walkthrough before demos or code review |
 | [CODE_REVIEW.md](./CODE_REVIEW.md) | Scanner-lite branch review checklist |
 | [SCANNER-LITE-ARCHITECTURE.md](./SCANNER-LITE-ARCHITECTURE.md) | Scanner-lite architecture deep dive |
+| [STINGAR-INTEGRATION.md](./STINGAR-INTEGRATION.md) | Wiring scanner-lite into a STINGAR v2.3 stack |
 | [C2_ENGINE_INTEGRATION.md](./C2_ENGINE_INTEGRATION.md) | Porting modules into c2-engine inline engine |
 
-For scanner-lite on this branch, start with **SCANNER-LITE.md** then **SCANNER-LITE-ARCHITECTURE.md**. For the full hybrid platform, start with **ARCHITECTURE.md**.
+For scanner-lite on this branch, start with **BOSS-GUIDE.md** (stakeholders) or **SCANNER-LITE.md** (developers), then **SCANNER-LITE-ARCHITECTURE.md**. For the full hybrid platform, start with **ARCHITECTURE.md**.
 
 ## Quick links
 
